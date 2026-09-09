@@ -124,7 +124,15 @@ i backendu bez přepisování herních pravidel.
   vyrábět, existují jen na konkrétních regionech a odemykají možnosti.
 - Vlastník regionu: `null` (neutrální), hráč, nebo bot.
 - Budovy patří regionu (ne hlavnímu městu). Prototyp: Farma, Důl (obojí
-  +produkce), Kasárna (+vojenská síla). Stačí seznam, žádné rozmisťování.
+  +produkce), Kasárna (+vojenská síla).
+- Region má **stavební místa** (`Region.slots`), ne prostý seznam budov. Obecných
+  je 1 až 6 podle plochy a terénu; za každou strategickou surovinu přibyde jedno
+  vyhrazené. Akce `build` míří na konkrétní místo (`slot`).
+- Surovinové místo přijme jen stavbu, která surovinu zpřístupní
+  (`RESOURCE_IMPROVEMENT`): důl u železa, uhlí, ropy a zlata, farma u koní.
+  Důl se dá postavit i na obecné místo, ale **surovinu tím netěží** — princip
+  je jako v Civilizaci. Co hráč skutečně těží, říká `availableResources`;
+  odvozuje se to ze stavu světa, takže není co držet a nemůže se to rozejít.
 
 ## Scope prvního prototypu
 

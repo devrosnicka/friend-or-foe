@@ -1,4 +1,14 @@
-import type { Player, PlayerId, Point, Region, RegionId, World } from '../../src/types';
+import type {
+  BuildingType,
+  BuildSlot,
+  Player,
+  PlayerId,
+  Point,
+  Region,
+  RegionId,
+  StrategicResource,
+  World,
+} from '../../src/types';
 import { deepFreeze } from './deepFreeze';
 
 export const PLAYER_ID = 'p1';
@@ -11,6 +21,16 @@ const SQUARE: readonly Point[] = [
   { x: -1, y: 1 },
 ];
 
+/** Volné obecné místo. Většina testů řeší jen to, že nějaké je. */
+export function emptySlot(requires: StrategicResource | null = null): BuildSlot {
+  return { requires, building: null };
+}
+
+/** Místo, na kterém už něco stojí. */
+export function filledSlot(building: BuildingType, requires: StrategicResource | null = null): BuildSlot {
+  return { requires, building };
+}
+
 export function makeRegion(id: RegionId, patch: Partial<Region> = {}): Region {
   return {
     id,
@@ -19,7 +39,7 @@ export function makeRegion(id: RegionId, patch: Partial<Region> = {}): Region {
     neighbours: [],
     owner: null,
     resources: [],
-    buildings: [],
+    slots: [emptySlot(), emptySlot(), emptySlot()],
     shape: { outline: SQUARE, centre: { x: 0, y: 0 } },
     ...patch,
   };

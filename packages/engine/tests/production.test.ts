@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BASE_REGION_PRODUCTION, BUILDING_PRODUCTION } from '../src/constants';
 import { playerIncome, regionProduction } from '../src/rules/production';
-import { makeRegion, makeWorld, PLAYER_ID } from './helpers/makeWorld';
+import { filledSlot, makeRegion, makeWorld, PLAYER_ID } from './helpers/makeWorld';
 
 describe('regionProduction', () => {
   it('region bez budov vynáší základní produkci', () => {
@@ -9,7 +9,7 @@ describe('regionProduction', () => {
   });
 
   it('budovy se sčítají', () => {
-    const region = makeRegion('a', { buildings: ['farm', 'farm'] });
+    const region = makeRegion('a', { slots: [filledSlot('farm'), filledSlot('farm')] });
 
     expect(regionProduction(region)).toBe(BASE_REGION_PRODUCTION + 2 * BUILDING_PRODUCTION.farm);
   });
@@ -20,7 +20,7 @@ describe('playerIncome', () => {
     const world = makeWorld({
       regions: {
         home: makeRegion('home', { owner: PLAYER_ID }),
-        druhy: makeRegion('druhy', { owner: PLAYER_ID, buildings: ['mine'] }),
+        druhy: makeRegion('druhy', { owner: PLAYER_ID, slots: [filledSlot('mine')] }),
         cizi: makeRegion('cizi', { owner: 'p2' }),
       },
     });

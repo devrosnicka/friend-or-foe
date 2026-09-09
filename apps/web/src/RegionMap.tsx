@@ -1,21 +1,7 @@
-import type { PlayerId, Point, Region, Terrain, World } from '@fof/engine';
+import type { PlayerId, Point, Region, World } from '@fof/engine';
 import { useEffect, useMemo, useRef, useState } from 'react';
-
-const TERRAIN_FILL: Record<Terrain, string> = {
-  plains: '#6f8f4a',
-  forest: '#3f6b3a',
-  hills: '#8a7a4a',
-  mountains: '#6d6a68',
-  coast: '#5f8a6d',
-};
-
-export const TERRAIN_LABEL: Record<Terrain, string> = {
-  plains: 'roviny',
-  forest: 'les',
-  hills: 'kopce',
-  mountains: 'hory',
-  coast: 'pobřeží',
-};
+import { RegionView } from './RegionView';
+import { TERRAIN_FILL, TERRAIN_LABEL } from './terrain';
 
 /**
  * Úrovně přiblížení. Šířka výřezu se počítá jako násobek typického průměru
@@ -109,9 +95,18 @@ interface RegionMapProps {
   readonly currentPlayerId: PlayerId;
   readonly selectedRegionId: string | null;
   readonly onSelect: (regionId: string) => void;
+  readonly selectedSlot: number | null;
+  readonly onSelectSlot: (slot: number | null) => void;
 }
 
-export function RegionMap({ world, currentPlayerId, selectedRegionId, onSelect }: RegionMapProps) {
+export function RegionMap({
+  world,
+  currentPlayerId,
+  selectedRegionId,
+  onSelect,
+  selectedSlot,
+  onSelectSlot,
+}: RegionMapProps) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [wrapper, size] = useElementSize();
 
@@ -145,7 +140,8 @@ export function RegionMap({ world, currentPlayerId, selectedRegionId, onSelect }
     return <div className="region-map empty">Svět je prázdný.</div>;
   }
 
-  const level = ZOOM_LEVELS[zoom] as ZoomLevel;
+  const inRegion = zoom === ZOOM_LEVELS.length;
+  const level = ZOOM_LEVELS[Math.min(zoom, ZOOM_LEVELS.length - 1)] as ZoomLevel;
   const viewWidth = unit * level.span;
   const aspect = size.width > 0 ? size.height / size.width : 0.75;
   const viewHeight = viewWidth * aspect;
@@ -164,6 +160,53 @@ export function RegionMap({ world, currentPlayerId, selectedRegionId, onSelect }
   /** Popisky se nesmějí zmenšovat s výřezem, jinak by na dálku zmizely. */
   const textScale = size.width > 0 ? viewWidth / size.width : 1;
   const adjacent = new Set(focus.neighbours);
+
+  const controls = (
+    <>
+      <div className="map-controls">
+        <div className="zoom-levels" role="group" aria-label="Přiblížení">
+          {[...ZOOM_LEVELS.map((option) => option.label), 'Region'].map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              className={index === zoom ? 'active' : ''}
+              aria-pressed={index === zoom}
+              onClick={() => setZoom(index)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {home !== undefined && (
+          <button type="button" className="secondary" onClick={() => onSelect(home.id)}>
+            Moje území
+          </button>
+        )}
+      </div>
+
+      <p className="map-status">
+        {inRegion
+          ? `${focus.name} · ${focus.slots.length} stavebních míst`
+          : `${focus.name} · ${visible.length} z ${regions.length} regionů v záběru`}
+      </p>
+    </>
+  );
+
+  if (inRegion) {
+    return (
+      <div className="region-map" ref={wrapper}>
+        <RegionView
+          world={world}
+          region={focus}
+          canBuild={focus.owner === currentPlayerId}
+          selectedSlot={selectedSlot}
+          onSelectSlot={onSelectSlot}
+          onSelectRegion={onSelect}
+        />
+        {controls}
+      </div>
+    );
+  }
 
   return (
     <div className="region-map" ref={wrapper}>
@@ -197,30 +240,7 @@ export function RegionMap({ world, currentPlayerId, selectedRegionId, onSelect }
         ))}
       </svg>
 
-      <div className="map-controls">
-        <div className="zoom-levels" role="group" aria-label="Přiblížení">
-          {ZOOM_LEVELS.map((option, index) => (
-            <button
-              key={option.label}
-              type="button"
-              className={index === zoom ? 'active' : ''}
-              aria-pressed={index === zoom}
-              onClick={() => setZoom(index)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        {home !== undefined && (
-          <button type="button" className="secondary" onClick={() => onSelect(home.id)}>
-            Moje území
-          </button>
-        )}
-      </div>
-
-      <p className="map-status">
-        {focus.name} · {visible.length} z {regions.length} regionů v záběru
-      </p>
+      {controls}
     </div>
   );
 }
@@ -233,6 +253,11 @@ export function RegionMap({ world, currentPlayerId, selectedRegionId, onSelect }
 function roomAround(region: Region, box: Box): number {
   const { x } = region.shape.centre;
   return 2 * Math.min(x - box.minX, box.maxX - x);
+}
+
+/** Kolik staveb v regionu stojí. */
+function built(region: Region): number {
+  return region.slots.filter((slot) => slot.building !== null).length;
 }
 
 function pointsOf(outline: readonly Point[]): string {
@@ -310,14 +335,14 @@ function RegionShape({
         </text>
       )}
 
-      {labels === 'full' && label !== null && region.buildings.length > 0 && (
+      {labels === 'full' && label !== null && built(region) > 0 && (
         <text
           x={centre.x}
           y={centre.y + 28 * textScale}
           className="region-buildings"
           style={{ fontSize: 14 * textScale, strokeWidth: 3 * textScale }}
         >
-          {'▪'.repeat(region.buildings.length)}
+          {'▪'.repeat(built(region))}
         </text>
       )}
     </g>

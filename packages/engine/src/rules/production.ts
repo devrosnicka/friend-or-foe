@@ -3,8 +3,8 @@ import type { PlayerId, Region, World } from '../types';
 
 /** Kolik produkce region vynese za jeden tah. */
 export function regionProduction(region: Region): number {
-  return region.buildings.reduce(
-    (sum, building) => sum + BUILDING_PRODUCTION[building],
+  return region.slots.reduce(
+    (sum, slot) => sum + (slot.building === null ? 0 : BUILDING_PRODUCTION[slot.building]),
     BASE_REGION_PRODUCTION,
   );
 }

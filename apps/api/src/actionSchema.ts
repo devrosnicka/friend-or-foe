@@ -15,6 +15,7 @@ const actionSchema = z.discriminatedUnion('type', [
     type: z.literal('build'),
     playerId: z.string().min(1),
     regionId: z.string().min(1),
+    slot: z.number().int().min(0),
     building: z.enum(['farm', 'mine', 'barracks']),
   }),
   z.object({

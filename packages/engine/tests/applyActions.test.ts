@@ -18,12 +18,12 @@ describe('applyActions', () => {
     const world = expectOk(
       applyActions(before, [
         { type: 'claimRegion', playerId: PLAYER_ID, regionId: 'near' },
-        { type: 'build', playerId: PLAYER_ID, regionId: 'near', building: 'farm' },
+        { type: 'build', playerId: PLAYER_ID, regionId: 'near', slot: 0, building: 'farm' },
         { type: 'endTurn', playerId: PLAYER_ID },
       ]),
     );
 
-    expect(world.regions['near']?.buildings).toEqual(['farm']);
+    expect(world.regions['near']?.slots[0]?.building).toBe('farm');
     expect(world.turn).toBe(2);
   });
 
@@ -43,7 +43,7 @@ describe('applyActions', () => {
 
     const result = applyActions(before, [
       { type: 'claimRegion', playerId: PLAYER_ID, regionId: 'near' },
-      { type: 'build', playerId: PLAYER_ID, regionId: 'near', building: 'barracks' },
+      { type: 'build', playerId: PLAYER_ID, regionId: 'near', slot: 0, building: 'barracks' },
     ]);
 
     expectViolation(result, 'NOT_ENOUGH_PRODUCTION');

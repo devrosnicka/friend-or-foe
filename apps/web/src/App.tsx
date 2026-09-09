@@ -1,4 +1,10 @@
-import { playerIncome, STARTER_PLAYER_ID, type BuildingType, type World } from '@fof/engine';
+import {
+  availableResources,
+  playerIncome,
+  STARTER_PLAYER_ID,
+  type BuildingType,
+  type World,
+} from '@fof/engine';
 import { useEffect, useState } from 'react';
 import { fetchWorld, resetWorld, sendActions } from './api';
 import { RegionMap } from './RegionMap';
@@ -9,11 +15,21 @@ const CURRENT_PLAYER_ID = STARTER_PLAYER_ID;
 export function App() {
   const [world, setWorld] = useState<World | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetchWorld().then(setWorld).catch((cause: Error) => setError(cause.message));
+    fetchWorld()
+      .then((loaded) => {
+        setWorld(loaded);
+        // Kamera i panel startují na území hráče, ať je hned co dělat.
+        const home = Object.values(loaded.regions).find(
+          (region) => region.owner === CURRENT_PLAYER_ID,
+        );
+        setSelectedRegionId(home?.id ?? null);
+      })
+      .catch((cause: Error) => setError(cause.message));
   }, []);
 
   async function run(task: () => Promise<World>) {
@@ -47,6 +63,10 @@ export function App() {
         <span>
           Produkce <strong>{player?.production ?? 0}</strong> (+{playerIncome(world, CURRENT_PLAYER_ID)}/tah)
         </span>
+        <span>
+          Suroviny{' '}
+          <strong>{availableResources(world, CURRENT_PLAYER_ID).join(', ') || '—'}</strong>
+        </span>
         <button
           type="button"
           disabled={busy}
@@ -66,22 +86,28 @@ export function App() {
           world={world}
           currentPlayerId={CURRENT_PLAYER_ID}
           selectedRegionId={selectedRegionId}
-          onSelect={setSelectedRegionId}
+          onSelect={(regionId) => {
+            setSelectedRegionId(regionId);
+            setSelectedSlot(null);
+          }}
+          selectedSlot={selectedSlot}
+          onSelectSlot={setSelectedSlot}
         />
         <RegionPanel
           world={world}
           region={selectedRegion}
           currentPlayerId={CURRENT_PLAYER_ID}
           busy={busy}
+          selectedSlot={selectedSlot}
           onClaim={(regionId) =>
             run(() =>
               sendActions([{ type: 'claimRegion', playerId: CURRENT_PLAYER_ID, regionId }]),
             )
           }
-          onBuild={(regionId, building: BuildingType) =>
+          onBuild={(regionId, slot, building: BuildingType) =>
             run(() =>
               sendActions([
-                { type: 'build', playerId: CURRENT_PLAYER_ID, regionId, building },
+                { type: 'build', playerId: CURRENT_PLAYER_ID, regionId, slot, building },
               ]),
             )
           }

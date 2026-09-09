@@ -23,6 +23,18 @@ export interface RegionShape {
   readonly centre: Point;
 }
 
+/**
+ * Stavební místo v regionu. Obecných je tolik, kolik region unese podle
+ * velikosti a terénu; surovinové přibyde jedno za každou strategickou
+ * surovinu a přijme jen tu stavbu, která surovinu zpřístupní.
+ */
+export interface BuildSlot {
+  /** `null` = obecné místo. Jinak surovina, kterou tu stavba zpřístupní. */
+  readonly requires: StrategicResource | null;
+  /** `null` = volné místo. */
+  readonly building: BuildingType | null;
+}
+
 export interface Region {
   readonly id: RegionId;
   readonly name: string;
@@ -31,7 +43,7 @@ export interface Region {
   /** null = neutrální území */
   readonly owner: PlayerId | null;
   readonly resources: readonly StrategicResource[];
-  readonly buildings: readonly BuildingType[];
+  readonly slots: readonly BuildSlot[];
   readonly shape: RegionShape;
 }
 
@@ -57,6 +69,8 @@ export interface BuildAction {
   readonly type: 'build';
   readonly playerId: PlayerId;
   readonly regionId: RegionId;
+  /** Index do `Region.slots`. */
+  readonly slot: number;
   readonly building: BuildingType;
 }
 
@@ -74,6 +88,9 @@ export type RuleViolationCode =
   | 'REGION_NOT_NEUTRAL'
   | 'REGION_NOT_ADJACENT'
   | 'REGION_NOT_OWNED'
+  | 'UNKNOWN_SLOT'
+  | 'SLOT_TAKEN'
+  | 'BUILDING_NOT_ALLOWED'
   | 'NOT_ENOUGH_PRODUCTION';
 
 export interface RuleViolation {

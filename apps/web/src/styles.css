@@ -222,6 +222,105 @@ button.secondary {
   letter-spacing: 2px;
 }
 
+/* --- pohled na jeden region --- */
+.region-view {
+  width: 100%;
+  height: 100%;
+}
+
+.region-view svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Sousedé jsou jen náznak, aby bylo poznat, kudy se dá dál. */
+.surrounds polygon {
+  opacity: 0.3;
+}
+
+.surrounds-name {
+  text-anchor: middle;
+  fill: var(--muted);
+  paint-order: stroke;
+  stroke: #0009;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.surrounds-name:hover {
+  fill: var(--text);
+}
+
+.region-view .focus {
+  stroke: #101316cc;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.slot {
+  cursor: pointer;
+}
+
+.slot circle {
+  fill: #12181dbb;
+  stroke: var(--muted);
+  stroke-width: 2;
+}
+
+.slot.free circle {
+  stroke-dasharray: 6 4;
+}
+
+.slot.resource circle {
+  stroke: var(--accent);
+  fill: #2a220fdd;
+}
+
+.slot.taken circle {
+  fill: #12181dee;
+  stroke: var(--text);
+  stroke-dasharray: none;
+}
+
+.slot.selected circle {
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-dasharray: none;
+}
+
+.slot:hover circle {
+  stroke: var(--text);
+}
+
+.slot text {
+  text-anchor: middle;
+  pointer-events: none;
+  fill: var(--text);
+  paint-order: stroke;
+  stroke: #0009;
+}
+
+.slot.resource text {
+  fill: var(--accent);
+}
+
+.slot:focus {
+  outline: none;
+}
+
+.slot:focus-visible circle {
+  stroke: var(--text);
+  stroke-width: 4;
+}
+
+.slot-title {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .panel {
   width: 300px;
   flex: none;

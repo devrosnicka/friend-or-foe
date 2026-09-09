@@ -34,7 +34,8 @@ describe('generateWorld', () => {
       expect(region.neighbours.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minNeighbours);
       expect(region.neighbours.length).toBeLessThanOrEqual(STARTER_OPTIONS.maxNeighbours);
       expect(region.neighbours).not.toContain(region.id);
-      expect(region.buildings).toEqual([]);
+      expect(region.slots.every((slot) => slot.building === null)).toBe(true);
+      expect(region.slots.length).toBeGreaterThan(0);
       expect(region.shape.outline.length).toBeGreaterThanOrEqual(3);
 
       for (const neighbour of region.neighbours) {

@@ -2,8 +2,15 @@ import { buildLayout, type LayoutOptions, type RegionLayout } from './layout';
 import { buildVoronoi, type VoronoiDiagram } from './voronoi';
 import { createRandom, type Random } from './random';
 import { distanceSquared } from './geometry';
+import {
+  MAX_GENERAL_SLOTS,
+  MIN_GENERAL_SLOTS,
+  SLOTS_AT_MEDIAN_AREA,
+  TERRAIN_SLOTS,
+} from '../constants';
 import { makeNamePool } from './names';
 import type {
+  BuildSlot,
   Player,
   PlayerId,
   Point,
@@ -136,6 +143,16 @@ function assignTerrain(layout: readonly RegionLayout[], random: Random): Terrain
   return terrain as Terrain[];
 }
 
+/**
+ * Kolik obecných stavebních míst region unese. Region o průměrné ploše dostane
+ * `SLOTS_AT_MEDIAN_AREA`, dvakrát větší dvakrát tolik; terén to pak posune —
+ * na rovinách se staví líp než v horách.
+ */
+function generalSlots(area: number, medianArea: number, terrain: Terrain): number {
+  const bySize = Math.round((area / medianArea) * SLOTS_AT_MEDIAN_AREA);
+  return Math.min(MAX_GENERAL_SLOTS, Math.max(MIN_GENERAL_SLOTS, bySize + TERRAIN_SLOTS[terrain]));
+}
+
 function assembleWorld(
   layout: readonly RegionLayout[],
   options: WorldOptions,
@@ -159,12 +176,24 @@ function assembleWorld(
     }
   });
 
+  const sortedAreas = layout.map((region) => region.area).sort((a, b) => a - b);
+  const medianArea = sortedAreas[Math.floor(sortedAreas.length / 2)] as number;
+
   const regions: Record<RegionId, Region> = {};
   layout.forEach((region, index) => {
     const kind = terrain[index] as Terrain;
     const available = RESOURCE_BY_TERRAIN[kind];
     const resources =
       random.next() < RESOURCE_CHANCE ? [available[random.int(available.length)] as StrategicResource] : [];
+
+    // Obecná místa podle velikosti a terénu, plus jedno za každou surovinu.
+    const slots: BuildSlot[] = [
+      ...Array.from({ length: generalSlots(region.area, medianArea, kind) }, (): BuildSlot => ({
+        requires: null,
+        building: null,
+      })),
+      ...resources.map((resource): BuildSlot => ({ requires: resource, building: null })),
+    ];
 
     const id = ids[index] as RegionId;
     regions[id] = {
@@ -174,7 +203,7 @@ function assembleWorld(
       neighbours: region.neighbours.map((neighbour) => ids[neighbour] as RegionId),
       owner: index === home ? options.playerId : null,
       resources,
-      buildings: [],
+      slots,
       shape: { outline: region.outline, centre: region.centre },
     };
   });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BASE_REGION_PRODUCTION, BUILDING_PRODUCTION } from '../src/constants';
 import { endTurn } from '../src/rules/endTurn';
 import { expectOk, expectViolation } from './helpers/expect';
-import { makePlayer, makeRegion, makeWorld, PLAYER_ID } from './helpers/makeWorld';
+import { filledSlot, makePlayer, makeRegion, makeWorld, PLAYER_ID } from './helpers/makeWorld';
 
 const endTurnFor = (world = makeWorld(), playerId = PLAYER_ID) =>
   endTurn(world, { type: 'endTurn', playerId });
@@ -24,7 +24,7 @@ describe('endTurn', () => {
     const start = makeWorld({
       production: 0,
       regions: {
-        home: makeRegion('home', { owner: PLAYER_ID, buildings: ['farm', 'mine'] }),
+        home: makeRegion('home', { owner: PLAYER_ID, slots: [filledSlot('farm'), filledSlot('mine')] }),
       },
     });
 
@@ -40,7 +40,7 @@ describe('endTurn', () => {
       production: 0,
       regions: {
         home: makeRegion('home', { owner: PLAYER_ID }),
-        divocina: makeRegion('divocina', { buildings: ['farm'] }),
+        divocina: makeRegion('divocina', { slots: [filledSlot('farm')] }),
       },
     });
 
@@ -58,7 +58,7 @@ describe('endTurn', () => {
       },
       regions: {
         home: makeRegion('home', { owner: 'p1' }),
-        vychod: makeRegion('vychod', { owner: 'p2', buildings: ['farm'] }),
+        vychod: makeRegion('vychod', { owner: 'p2', slots: [filledSlot('farm')] }),
       },
     });
 
@@ -73,7 +73,7 @@ describe('endTurn', () => {
   it('kasárna zatím nic nevynášejí', () => {
     const start = makeWorld({
       production: 0,
-      regions: { home: makeRegion('home', { owner: PLAYER_ID, buildings: ['barracks'] }) },
+      regions: { home: makeRegion('home', { owner: PLAYER_ID, slots: [filledSlot('barracks')] }) },
     });
 
     const world = expectOk(endTurnFor(start));

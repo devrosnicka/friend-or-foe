@@ -64,7 +64,18 @@ describe('createStarterWorld', () => {
   });
 
   it('žádný region nezačíná s budovami', () => {
-    expect(regions.every((region) => region.buildings.length === 0)).toBe(true);
+    expect(regions.every((region) => region.slots.every((slot) => slot.building === null))).toBe(
+      true,
+    );
+  });
+
+  it('každý region má aspoň jedno stavební místo a surovina přidá vlastní', () => {
+    for (const region of regions) {
+      const special = region.slots.filter((slot) => slot.requires !== null);
+
+      expect(region.slots.length).toBeGreaterThan(0);
+      expect(special.map((slot) => slot.requires)).toEqual([...region.resources]);
+    }
   });
 
   it('některé regiony nesou strategické suroviny', () => {
