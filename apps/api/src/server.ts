@@ -1,5 +1,7 @@
+import fastifyStatic from '@fastify/static';
 import { applyActions, type World } from '@fof/engine';
 import Fastify from 'fastify';
+import { resolve } from 'node:path';
 import { actionsBodySchema, type ActionsBody } from './actionSchema';
 import { dataFilePath, loadWorld, resetWorld, saveWorld } from './storage';
 
@@ -19,6 +21,8 @@ function serialize<T>(task: () => Promise<T>): Promise<T> {
   queue = result.catch(() => undefined);
   return result;
 }
+
+app.get('/api/health', async () => ({ ok: true }));
 
 app.get('/api/world', async () => ({ world: await loadWorld() }));
 
@@ -49,10 +53,21 @@ app.post('/api/actions', async (request, reply) => {
 
 app.post('/api/reset', async () => serialize(async () => ({ world: await resetWorld() })));
 
+/**
+ * V produkci servíruje stejný proces i sestavený frontend, takže aplikace jede
+ * z jednoho kontejneru a jednoho původu. Ve vývoji tohle běží přes vite.
+ */
+const staticDir = process.env['FOF_STATIC_DIR'];
+if (staticDir) {
+  await app.register(fastifyStatic, { root: resolve(staticDir) });
+}
+
 const port = Number(process.env['PORT'] ?? 3000);
+/** Ve vývoji jen localhost; v kontejneru musí poslouchat na všech rozhraních. */
+const host = process.env['HOST'] ?? '127.0.0.1';
 
 app
-  .listen({ port, host: '127.0.0.1' })
+  .listen({ port, host })
   .then(() => app.log.info(`Stav světa: ${dataFilePath}`))
   .catch((error: unknown) => {
     app.log.error(error);

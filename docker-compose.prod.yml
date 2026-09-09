@@ -1,0 +1,30 @@
+# Produkční nasazení na VPS. Soubor sem kopíruje GitHub Actions spolu s .env,
+# ve kterém jsou APP_IMAGE a přihlašovací údaje pro basic auth.
+services:
+  app:
+    # Konkrétní SHA tag, ne :latest — rollback je pak jen změna proměnné.
+    image: ${APP_IMAGE}
+    environment:
+      PORT: 3000
+      FOF_STATIC_DIR: /app/public
+      FOF_DATA_FILE: /app/data/world.json
+    volumes:
+      # Jediný stav aplikace. Bez svazku by se svět při každém nasazení ztratil.
+      - world_data:/app/data
+    restart: unless-stopped
+    networks:
+      - default
+      - caddy_net
+    labels:
+      caddy: friend-or-foe.tomaskrizek.cz
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+      # Prototyp nemá vlastní autentizaci a svět je sdílený, takže přístup
+      # hlídá proxy. Hash vyrob: docker run --rm caddy caddy hash-password
+      caddy.basic_auth.${BASIC_AUTH_USER}: "${BASIC_AUTH_HASH}"
+
+networks:
+  caddy_net:
+    external: true
+
+volumes:
+  world_data:

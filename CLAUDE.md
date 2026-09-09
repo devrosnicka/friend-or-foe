@@ -47,6 +47,20 @@ Pravidla, která drží architekturu pohromadě:
   nepokryté pravidlo shodí `npm test`.
 - Ceny a výnosy patří do `packages/engine/src/constants.ts`, ne do pravidel.
 
+## Nasazení
+
+`Dockerfile` staví jeden image: Fastify servíruje API i sestavený frontend
+(`FOF_STATIC_DIR`). Stav světa je v `FOF_DATA_FILE` na docker svazku.
+`.github/workflows/deploy.yml` pouští testy a typecheck jako bránu, pak build do
+GHCR a SSH deploy na VPS za Caddy proxy (`caddy_net`, labely v
+`docker-compose.prod.yml`). Podrobnosti a potřebné secrets viz README.
+
+Při zásahu do nasazení mysli na to, že:
+
+- server se v kontejneru musí vázat na `0.0.0.0` (`HOST`), lokálně na `127.0.0.1`,
+- nasazuje se SHA tag, ne `latest` — kvůli rollbacku,
+- svazek `world_data` je jediné místo, kde stav přežije redeploy.
+
 ## Zdrojové dokumenty
 
 Číst v tomto pořadí, od nejobecnějšího po nejkonkrétnější:

@@ -34,6 +34,40 @@ npm test           # unit testy enginu, coverage s prahy 100 %
 Stav světa se ukládá do `apps/api/data/world.json`. Novou hru založí tlačítko
 *Nová hra* nebo `POST /api/reset`.
 
+## Nasazení
+
+Push do `main` spustí workflow `Test, Build & Deploy`: testy a typecheck →
+build image do GHCR → nasazení na VPS přes SSH. Na pull requestech běží jen
+testy. Aplikace jede v jednom kontejneru (Fastify servíruje API i sestavený
+frontend) za sdílenou Caddy proxy z repozitáře `hetzner-infra-proxy`.
+
+Produkčně běží na <https://friend-or-foe.tomaskrizek.cz> za basic auth.
+
+### Co je potřeba nastavit jednou
+
+GitHub secrets:
+
+| Secret | Význam |
+| --- | --- |
+| `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` | přístup na VPS |
+| `BASIC_AUTH_HASH` | bcrypt hash hesla: `docker run --rm caddy caddy hash-password` |
+
+GitHub variables: `BASIC_AUTH_USER` — přihlašovací jméno k basic auth.
+
+Na serveru a v DNS:
+
+- A záznam `friend-or-foe.tomaskrizek.cz` na IP VPS,
+- síť `caddy_net` (workflow ji vytvoří, pokud chybí),
+- GHCR balíček musí být veřejný, jinak `docker compose pull` na VPS selže na
+  autorizaci — po prvním pushi přepni viditelnost balíčku na public, nebo se
+  na VPS jednou přihlas přes `docker login ghcr.io`.
+
+### Stav a rollback
+
+Svět žije ve svazku `world_data`, takže nasazení o něj nepřijde. Nasazuje se
+konkrétní SHA tag; rollback je přepsání `APP_IMAGE` v `/opt/friend-or-foe/.env`
+na starší SHA a `docker compose -f docker-compose.prod.yml up -d`.
+
 ## Dokumentace
 
 - [Vision.md](Vision.md) — dlouhodobá vize
