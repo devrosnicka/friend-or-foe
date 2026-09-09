@@ -196,14 +196,8 @@ export function RegionView({
         role="group"
         aria-label={`Region ${region.name}, ${region.slots.length} stavebních míst`}
       >
-        <defs>
-          <filter id="haze" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation={Math.max(width, height) * 0.012} />
-          </filter>
-        </defs>
-
-        {/* Sousedé jen jako rozmazaný náznak — kam sahá moře, nekreslí se nic. */}
-        <g className="surrounds" filter="url(#haze)">
+        {/* Sousedé jen jako slabý náznak — kam sahá moře, nekreslí se nic. */}
+        <g className="surrounds">
           {neighbours.map((neighbour) => (
             <polygon
               key={neighbour.id}

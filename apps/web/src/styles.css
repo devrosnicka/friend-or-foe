@@ -236,7 +236,7 @@ button.secondary {
 
 /* Sousedé jsou jen náznak, aby bylo poznat, kudy se dá dál. */
 .surrounds polygon {
-  opacity: 0.45;
+  opacity: 0.3;
 }
 
 .surrounds-name {
