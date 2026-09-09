@@ -390,11 +390,18 @@ export function buildLayout(
   }
 
   const shore = coastal(diagram, territories, alive);
-  const kept = [...alive].sort((left, right) => {
-    const a = polygonCentroid((territories[left] as Territory).ring.map((v) => diagram.vertices[v] as Point));
-    const b = polygonCentroid((territories[right] as Territory).ring.map((v) => diagram.vertices[v] as Point));
-    return a.y - b.y || a.x - b.x;
-  });
+  const northing = new Map(
+    [...alive].map((group) => [
+      group,
+      polygonCentroid((territories[group] as Territory).ring.map((v) => diagram.vertices[v] as Point))
+        .y,
+    ]),
+  );
+  // Vzestupně podle indexu a pak stabilně shora dolů: shodné výšky tak
+  // rozhodne index a pořadí regionů je dané semínkem, ne pořadím v množině.
+  const kept = [...alive]
+    .sort((left, right) => left - right)
+    .sort((left, right) => (northing.get(left) as number) - (northing.get(right) as number));
   const positionOf = new Map(kept.map((group, index) => [group, index]));
 
   return kept.map((group): RegionLayout => {

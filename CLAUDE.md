@@ -96,7 +96,8 @@ i backendu bez přepisování herních pravidel.
   vykreslení, pravidla ho neznají).
 - Pohyb a expanze jsou možné **pouze mezi sousedními regiony**.
 - Mapa se **generuje ze semínka** (`createWorldFromSeed`): body v mřížce →
-  Delaunay → Voronoi → slití buněk do nepravidelně velkých regionů → doladění,
+  Delaunay (Bowyer–Watson, O(n²)) → Voronoi → slití buněk do nepravidelně
+  velkých regionů → doladění,
   dokud nemá **každý region 3 až 5 sousedů** (`minNeighbours`/`maxNeighbours`).
   Semínko musí přijít zvenčí, engine sám na `Date.now()` ani `Math.random()`
   nesahá.
@@ -107,6 +108,10 @@ i backendu bez přepisování herních pravidel.
   ukusovala dovnitř, dokud by z mapy nezbylo nic.
 - Podlaha 6 a výš je **nemožná z principu**: mapa je rovinný graf, kde
   `2E ≤ 6n − 12`, takže aspoň jeden region má vždy nejvýš pět sousedů.
+- Triangulace staví v normalizovaném rámci: pomocný trojúhelník musí obsáhnout
+  kružnice opsané všech trojúhelníků, a ty u skoro kolineárních trojic na okraji
+  mají poloměr stonásobky velikosti mapy. V původních souřadnicích by tak daleké
+  vrcholy ubraly platné číslice.
 - Jména regionů se skládají jako anglická místní jména (kořen + přípona:
   Ashford, Thornbury). Tabulky v `map/names.ts` unesou přes 45 tisíc jmen,
   takže se na mapě o stovkách regionů žádné neopakuje.
