@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { buildLayout, MAX_NEIGHBOURS, MIN_NEIGHBOURS, type LayoutOptions } from '../src/map/layout';
+import { buildLayout, type LayoutOptions } from '../src/map/layout';
 import { createRandom } from '../src/map/random';
 import { polygonArea } from '../src/map/geometry';
 import { contains, makeDiagram } from './helpers/diagram';
 
-const OPTIONS: LayoutOptions = { mergeChance: 0.45, coastErosion: 0.2, minRegions: 6 };
+const OPTIONS: LayoutOptions = {
+  minNeighbours: 3,
+  maxNeighbours: 5,
+  mergeChance: 0.45,
+  coastErosion: 0.2,
+  minRegions: 6,
+};
 
 /** První semínko, se kterým se z dané mřížky rozvržení povede. */
 function firstLayout(columns: number, rows: number, options: LayoutOptions = OPTIONS) {
@@ -23,8 +29,8 @@ describe('buildLayout', () => {
 
   it('každý region má tři až pět sousedů', () => {
     for (const region of layout) {
-      expect(region.neighbours.length).toBeGreaterThanOrEqual(MIN_NEIGHBOURS);
-      expect(region.neighbours.length).toBeLessThanOrEqual(MAX_NEIGHBOURS);
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(OPTIONS.minNeighbours);
+      expect(region.neighbours.length).toBeLessThanOrEqual(OPTIONS.maxNeighbours);
     }
   });
 
@@ -89,6 +95,18 @@ describe('buildLayout', () => {
   it('okusování pobřeží se dá vypnout i zapnout naplno', () => {
     expect(firstLayout(9, 8, { ...OPTIONS, coastErosion: 0 }).length).toBeGreaterThan(0);
     expect(firstLayout(9, 8, { ...OPTIONS, coastErosion: 1 }).length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    [3, 4],
+    [3, 7],
+  ])('dodrží i jiné okno než výchozí — %i až %i sousedů', (min, max) => {
+    const custom = firstLayout(9, 8, { ...OPTIONS, minNeighbours: min, maxNeighbours: max });
+
+    for (const region of custom) {
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(min);
+      expect(region.neighbours.length).toBeLessThanOrEqual(max);
+    }
   });
 
   it('vrátí null, když by mapa klesla pod požadovaný počet regionů', () => {

@@ -13,6 +13,8 @@ export const STARTER_OPTIONS: WorldOptions = {
   spacing: 130,
   jitter: 0.3,
   dropChance: 0.18,
+  minNeighbours: 3,
+  maxNeighbours: 5,
   mergeChance: 0.45,
   coastErosion: 0.2,
   minRegions: 12,

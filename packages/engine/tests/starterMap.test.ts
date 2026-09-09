@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createStarterWorld, createWorldFromSeed, STARTER_PLAYER_ID } from '../src/map/starterMap';
-import { MAX_NEIGHBOURS, MIN_NEIGHBOURS } from '../src/map/layout';
+import {
+  createStarterWorld,
+  createWorldFromSeed,
+  STARTER_OPTIONS,
+  STARTER_PLAYER_ID,
+} from '../src/map/starterMap';
 
 describe('createStarterWorld', () => {
   const world = createStarterWorld();
@@ -48,8 +52,8 @@ describe('createStarterWorld', () => {
 
   it('každý region má tři až pět sousedů', () => {
     for (const region of regions) {
-      expect(region.neighbours.length).toBeGreaterThanOrEqual(MIN_NEIGHBOURS);
-      expect(region.neighbours.length).toBeLessThanOrEqual(MAX_NEIGHBOURS);
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minNeighbours);
+      expect(region.neighbours.length).toBeLessThanOrEqual(STARTER_OPTIONS.maxNeighbours);
     }
   });
 

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { generateWorld, type WorldOptions } from '../src/map/generateWorld';
-import { MAX_NEIGHBOURS, MIN_NEIGHBOURS } from '../src/map/layout';
 import { STARTER_OPTIONS } from '../src/map/starterMap';
 import { REGION_NAMES } from '../src/map/names';
 
@@ -27,8 +26,8 @@ describe('generateWorld', () => {
     expect(world.turn).toBe(1);
 
     for (const region of regions) {
-      expect(region.neighbours.length).toBeGreaterThanOrEqual(MIN_NEIGHBOURS);
-      expect(region.neighbours.length).toBeLessThanOrEqual(MAX_NEIGHBOURS);
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minNeighbours);
+      expect(region.neighbours.length).toBeLessThanOrEqual(STARTER_OPTIONS.maxNeighbours);
       expect(region.neighbours).not.toContain(region.id);
       expect(region.buildings).toEqual([]);
       expect(region.shape.outline.length).toBeGreaterThanOrEqual(3);
@@ -90,6 +89,23 @@ describe('generateWorld', () => {
     }
 
     expect([...edges.values()].every((count) => count <= 2)).toBe(true);
+  });
+
+  it('dodrží i jinak nastavené okno sousednosti', () => {
+    // Podlaha 4 vyjde jen na některých semínkách — mapa se kvůli ní zmenší,
+    // protože regiony na pobřeží mají přirozeně tři sousedy a musí pryč.
+    const world = generateWorld({
+      ...withSeed(202),
+      minNeighbours: 4,
+      maxNeighbours: 9,
+      minRegions: 6,
+      attempts: 300,
+    });
+
+    for (const region of Object.values(world.regions)) {
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(4);
+      expect(region.neighbours.length).toBeLessThanOrEqual(9);
+    }
   });
 
   it('vzdá to, když z tak malé mřížky mapa vzniknout nemůže', () => {

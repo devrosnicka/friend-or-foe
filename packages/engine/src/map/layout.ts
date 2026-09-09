@@ -4,10 +4,6 @@ import type { Random } from './random';
 import type { VoronoiCell, VoronoiDiagram } from './voronoi';
 import type { Point } from '../types';
 
-/** Kolik sousedů smí mít region. Mimo tento rozsah se rozvržení zahodí. */
-export const MIN_NEIGHBOURS = 3;
-export const MAX_NEIGHBOURS = 5;
-
 /** Největší region vznikne slitím tolika Voronoi buněk. */
 const MAX_GROUP_CELLS = 3;
 /** Kolikrát víc váží soused sražený pod minimum než soused sražený na minimum. */
@@ -17,6 +13,9 @@ const STARVED_PENALTY = 6;
 const TRIPLE_SHARE = 0.35;
 
 export interface LayoutOptions {
+  /** Kolik sousedů smí mít region. Mimo tento rozsah se rozvržení zahodí. */
+  readonly minNeighbours: number;
+  readonly maxNeighbours: number;
   /** Pravděpodobnost, že se buňka slije se sousedem do většího regionu. */
   readonly mergeChance: number;
   /** Pravděpodobnost, že se pobřežní region promění v moře. Tvaruje pobřeží. */
@@ -141,7 +140,8 @@ function isConnected(alive: ReadonlySet<number>, adjacency: readonly number[][])
 }
 
 /**
- * Zaplaví část skupin mořem, dokud nemá každý zbylý region 3 až 5 sousedů.
+ * Zaplaví část skupin mořem, dokud nemá každý zbylý region tolik sousedů,
+ * kolik dovoluje `minNeighbours`..`maxNeighbours`.
  *
  * Voronoi mozaika má ve vnitrozemí zhruba šest sousedů na buňku, takže horní
  * hranici jde udržet jedině tím, že se mezi regiony objeví voda. Odebírá se
@@ -170,8 +170,8 @@ function carveSea(
   };
 
   for (;;) {
-    const crowded = [...alive].filter((group) => degree(group) > MAX_NEIGHBOURS);
-    const lonely = [...alive].filter((group) => degree(group) < MIN_NEIGHBOURS);
+    const crowded = [...alive].filter((group) => degree(group) > options.maxNeighbours);
+    const lonely = [...alive].filter((group) => degree(group) < options.minNeighbours);
     if (crowded.length === 0 && lonely.length === 0) {
       break;
     }
@@ -190,7 +190,11 @@ function carveSea(
     const damage = (victim: number): number =>
       livingNeighbours(victim).reduce((total, neighbour) => {
         const after = degree(neighbour) - 1;
-        return total + (after < MIN_NEIGHBOURS ? STARVED_PENALTY : 0) + (after === MIN_NEIGHBOURS ? 1 : 0);
+        return (
+          total +
+          (after < options.minNeighbours ? STARVED_PENALTY : 0) +
+          (after === options.minNeighbours ? 1 : 0)
+        );
       }, 0);
 
     const ordered = [...candidates].sort(
@@ -215,7 +219,7 @@ function carveSea(
       coastal[group] === true &&
       random.next() < options.coastErosion &&
       alive.size - 1 >= options.minRegions &&
-      livingNeighbours(group).every((neighbour) => degree(neighbour) - 1 >= MIN_NEIGHBOURS);
+      livingNeighbours(group).every((neighbour) => degree(neighbour) - 1 >= options.minNeighbours);
     if (safe) {
       remove(group);
     }
@@ -265,7 +269,7 @@ function labelPoint(diagram: VoronoiDiagram, group: Group, outline: readonly Poi
 
 /**
  * Poskládá z Voronoi diagramu rozvržení mapy: nepravidelně velké regiony,
- * každý se třemi až pěti sousedy.
+ * každý s počtem sousedů v požadovaném rozsahu.
  *
  * `interior` jsou body, které smějí být pevninou. Zbytek diagramu je jen rám:
  * jeho buňky bývají neomezené nebo se táhnou daleko za mapu, takže se
