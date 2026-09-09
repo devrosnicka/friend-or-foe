@@ -231,10 +231,25 @@ function repair(
       );
     }, 0);
 
-  /** Osamělý region si přibere souseda; když to nejde, zmizí pod vodou. */
+  const areaOf = (group: number): number =>
+    polygonArea(
+      (territories[group] as Territory).ring.map((vertex) => diagram.vertices[vertex] as Point),
+    );
+
+  /**
+   * Osamělý region si přibere souseda; když to nejde, zmizí pod vodou.
+   *
+   * Z použitelných sousedů se bere ten **nejmenší**, který zároveň zvedne
+   * počet sousedů na požadované minimum. Bez toho se pohlcování nabaluje:
+   * region po sloučení bývá pořád osamělý, pohltí dalšího, a protože se na
+   * velikost nikde nekoukalo, jeden region snadno spolykal pětinu pevniny.
+   */
   const grow = (group: number): boolean => {
     const mine = new Set(living(group));
+    // Vzestupně podle indexu: řazení níž je stabilní, takže tenhle pořádek
+    // rozhoduje o shodách a mapa vyjde z téhož semínka pokaždé stejně.
     const scored = [...mine]
+      .sort((left, right) => left - right)
       .map((candidate) => {
         const union = new Set([...mine, ...living(candidate)]);
         union.delete(group);
@@ -244,15 +259,16 @@ function repair(
           candidate,
           fits: union.size <= options.maxNeighbours ? 0 : 1,
           damage: damage(shared),
-          size: union.size,
+          settles: union.size >= options.minNeighbours ? 0 : 1,
+          area: areaOf(candidate),
         };
       })
       .sort(
         (left, right) =>
           left.fits - right.fits ||
           left.damage - right.damage ||
-          right.size - left.size ||
-          left.candidate - right.candidate,
+          left.settles - right.settles ||
+          left.area - right.area,
       );
 
     return (

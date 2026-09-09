@@ -92,9 +92,9 @@ describe('buildLayout', () => {
   });
 
   it('nezaplaví region, kterým mapa drží pohromadě', () => {
-    // Semínko 111 na mřížce 9×8 vede na šíji: zaplavení jednoho regionu by
+    // Semínko 337 na mřížce 11×9 vede na šíji: zaplavení jednoho regionu by
     // pevninu rozdělilo, takže generátor musí sáhnout po jiném.
-    const narrow = layoutFor(9, 8, 111);
+    const narrow = layoutFor(11, 9, 337);
 
     expect(isWhole(narrow)).toBe(true);
     expect(narrow.length).toBeGreaterThanOrEqual(OPTIONS.minRegions);
