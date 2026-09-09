@@ -1,0 +1,191 @@
+:root {
+  color-scheme: dark;
+  --bg: #14171b;
+  --panel: #1e232a;
+  --line: #333b45;
+  --text: #e6e8ea;
+  --muted: #98a2ad;
+  --accent: #d8b64a;
+  --mine: #7c5cd6;
+  --foreign: #c0483c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+header h1 {
+  font-size: 16px;
+  margin: 0 auto 0 0;
+}
+
+button {
+  background: var(--accent);
+  color: #1a1a1a;
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.layout {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  align-items: flex-start;
+}
+
+.hex-map {
+  flex: 1 1 auto;
+  /* min-width: 0 nechá SVG zmenšit se pod svou vnitřní šířku, jinak layout přeteče. */
+  min-width: 0;
+  height: calc(100vh - 130px);
+}
+
+.hex {
+  cursor: pointer;
+}
+
+.hex:focus {
+  outline: none;
+}
+
+.hex:focus-visible .outline {
+  stroke: var(--text);
+  stroke-width: 4;
+}
+
+.hex .owner-overlay {
+  fill: transparent;
+}
+
+.hex.mine .owner-overlay {
+  fill: var(--mine);
+  opacity: 0.55;
+}
+
+.hex.foreign .owner-overlay {
+  fill: var(--foreign);
+  opacity: 0.55;
+}
+
+.hex .outline {
+  fill: none;
+  stroke: #10131699;
+  stroke-width: 2;
+}
+
+.hex:hover .outline {
+  stroke: var(--text);
+}
+
+.hex.selected .outline {
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+
+.hex text {
+  text-anchor: middle;
+  pointer-events: none;
+  fill: #f2f2f2;
+  paint-order: stroke;
+  stroke: #0008;
+  stroke-width: 3px;
+}
+
+.hex-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hex-resource {
+  font-size: 11px;
+  fill: var(--accent);
+}
+
+.hex-buildings {
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.panel {
+  width: 300px;
+  flex: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.panel dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0 0 16px;
+}
+
+.panel dt {
+  color: var(--muted);
+}
+
+.panel dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.build-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hint {
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.error {
+  margin: 0;
+  padding: 8px 20px;
+  background: #5a2620;
+  color: #ffd9d3;
+}
+
+.loading {
+  padding: 40px;
+  color: var(--muted);
+}

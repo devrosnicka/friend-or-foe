@@ -4,13 +4,48 @@ Pokyny pro Claude Code při práci v tomto repozitáři.
 
 ## Stav projektu
 
-Repozitář zatím **neobsahuje žádný kód** — pouze návrhové dokumenty. Není zde
-build systém, package manager, testy ani zvolený jazyk/framework. Než začneš
-cokoli implementovat, ověř si u uživatele volbu technologického stacku;
-neodvozuj ji z ničeho v repu, protože tam zatím nic není.
+Běží první prototyp: hexová mapa v prohlížeči, zabírání regionů, stavba budov,
+plochá ekonomika a ukládání stavu. Bot, boj, diplomacie ani multiplayer zatím
+neexistují — viz „Scope prvního prototypu".
 
-Dokumentace je psaná česky, doménové názvy (region, production, plains, iron, …)
+Dokumentace i UI jsou česky, doménové názvy (region, production, plains, iron, …)
 zůstávají anglicky. Drž se stejné konvence.
+
+## Příkazy
+
+```bash
+npm install          # jednou po klonu
+npm test             # unit testy enginu + coverage (prahy 100 %)
+npm run test:watch   # testy ve watch režimu
+npm run typecheck    # tsc přes všechny balíčky
+npm run dev:api      # API na http://localhost:3000
+npm run dev:web      # UI na http://localhost:5173 (proxuje /api na 3000)
+```
+
+Pro hraní je potřeba mít puštěné oba servery. Stav světa leží v
+`apps/api/data/world.json` (gitignorováno); smazání souboru nebo `POST /api/reset`
+založí novou hru.
+
+## Struktura
+
+```
+packages/engine/   herní logika — čisté funkce, ŽÁDNÉ runtime závislosti
+apps/api/          Fastify: validace vstupu, volání enginu, JSON persistence
+apps/web/          Vite + React: SVG hexová mapa a panel regionu
+```
+
+Pravidla, která drží architekturu pohromadě:
+
+- Do `packages/engine` nesmí přibýt runtime závislost, I/O ani nic z prohlížeče.
+  Engine je čistá funkce `applyActions(world, actions) -> ApplyResult`, která
+  vstupní svět nemutuje a nepoužívá `Date.now()` ani `Math.random()`.
+- V API nesmí být herní pravidlo. Jen zod validace tvaru, `applyActions`, uložení.
+- Porušení herního pravidla je návratová hodnota (`{ ok: false, error }`), ne
+  výjimka. API to mapuje na HTTP 400.
+- Nové pravidlo = nový soubor v `packages/engine/src/rules/` + testy na šťastnou
+  cestu i na každou podmínku, která ho odmítne. Coverage prahy jsou 100 %, takže
+  nepokryté pravidlo shodí `npm test`.
+- Ceny a výnosy patří do `packages/engine/src/constants.ts`, ne do pravidel.
 
 ## Zdrojové dokumenty
 
@@ -66,18 +101,19 @@ i backendu bez přepisování herních pravidel.
 ## Scope prvního prototypu
 
 Cílem není hra, ale **funkční simulace světa**: zobrazit mapu, sousednosti,
-vlastníky a suroviny; obsadit region; postavit budovu; nechat bota expandovat;
-uložit a načíst stav.
+vlastníky a suroviny; obsadit region; postavit budovu; uložit a načíst stav.
+Hotové je vše kromě bota, který přijde jako samostatný krok — engine je na něj
+připravený tím, že je deterministický a akce dostává zvenčí.
 
 Do prototypu **nepatří** (nepřidávej to ani „při té příležitosti"):
 diplomacie, obchod, technologie, aliance, bojový systém, multiplayer,
 notifikace, grafika.
 
-Bot je záměrně triviální: vyber sousední neutrální region, zaber ho, občas
-postav farmu. Neinvestuj do jeho inteligence.
+Až na bota dojde, bude záměrně triviální: vyber sousední neutrální region, zaber
+ho, občas postav farmu. Neinvestuj do jeho inteligence.
 
-Herní cyklus prototypu je tahový: akce hráče → akce bota → přepočet ekonomiky →
-uložení stavu. Skutečný asynchronní model s plánovanými událostmi přijde až
+Herní cyklus prototypu je tahový: akce hráče → (později bot) → přepočet
+ekonomiky v `endTurn` → uložení stavu. Skutečný asynchronní model s plánovanými událostmi přijde až
 později, ale návrh mu nemá bránit.
 
 ## Návrhové zásady vyplývající z vize
