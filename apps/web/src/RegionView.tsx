@@ -3,7 +3,9 @@ import { useMemo } from 'react';
 import { TERRAIN_FILL } from './terrain';
 
 /** Kolik místa kolem regionu zbude na náznak sousedů. */
-const SURROUNDS = 0.42;
+const SURROUNDS = 0.14;
+/** Jak daleko za hranicí regionu sedí popisek souseda, podíl velikosti regionu. */
+const NAME_OFFSET = 0.07;
 /** Poloměr kroužku stavebního místa jako podíl kratší strany regionu. */
 const SLOT_RADIUS = 0.13;
 /** Jak hustě se plocha regionu proseje při hledání míst. */
@@ -118,6 +120,37 @@ function slotPositions(region: Region, radius: number): Point[] {
   return chosen;
 }
 
+function vertexKey(point: Point): string {
+  return `${point.x.toFixed(3)},${point.y.toFixed(3)}`;
+}
+
+/**
+ * Kam napsat jméno souseda.
+ *
+ * Sousední regiony vzešly z téhož Voronoi diagramu, takže mají společnou
+ * hranici doslova ze stejných vrcholů. Popisek sedí na jejím středu, kousek
+ * za hranicí — na těžišti souseda by při těsném výřezu skončil mimo plátno
+ * a navíc by neříkal, kterou stranou se k regionu tiskne.
+ */
+function nameAnchor(focus: Region, neighbour: Region, reach: number): Point {
+  const own = new Set(focus.shape.outline.map(vertexKey));
+  const shared = neighbour.shape.outline.filter((point) => own.has(vertexKey(point)));
+
+  if (shared.length === 0) {
+    return neighbour.shape.centre;
+  }
+
+  const middle = {
+    x: shared.reduce((sum, point) => sum + point.x, 0) / shared.length,
+    y: shared.reduce((sum, point) => sum + point.y, 0) / shared.length,
+  };
+
+  const dx = middle.x - focus.shape.centre.x;
+  const dy = middle.y - focus.shape.centre.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: middle.x + (dx / length) * reach, y: middle.y + (dy / length) * reach };
+}
+
 interface RegionViewProps {
   readonly world: World;
   readonly region: Region;
@@ -151,6 +184,7 @@ export function RegionView({
 
   // Popisky nesmí zmenšit výřez, proto se počítají v jednotkách mapy.
   const scale = view.width / 900;
+  const offset = Math.max(width, height) * NAME_OFFSET;
   const neighbours = region.neighbours
     .map((id) => world.regions[id])
     .filter((neighbour): neighbour is Region => neighbour !== undefined);
@@ -164,7 +198,7 @@ export function RegionView({
       >
         <defs>
           <filter id="haze" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation={Math.max(width, height) * 0.02} />
+            <feGaussianBlur stdDeviation={Math.max(width, height) * 0.012} />
           </filter>
         </defs>
 
@@ -179,18 +213,21 @@ export function RegionView({
           ))}
         </g>
 
-        {neighbours.map((neighbour) => (
-          <text
-            key={neighbour.id}
-            className="surrounds-name"
-            x={neighbour.shape.centre.x}
-            y={neighbour.shape.centre.y}
-            style={{ fontSize: 15 * scale, strokeWidth: 3 * scale }}
-            onClick={() => onSelectRegion(neighbour.id)}
-          >
-            {neighbour.name}
-          </text>
-        ))}
+        {neighbours.map((neighbour) => {
+          const at = nameAnchor(region, neighbour, offset);
+          return (
+            <text
+              key={neighbour.id}
+              className="surrounds-name"
+              x={at.x}
+              y={at.y}
+              style={{ fontSize: 15 * scale, strokeWidth: 3 * scale }}
+              onClick={() => onSelectRegion(neighbour.id)}
+            >
+              {neighbour.name}
+            </text>
+          );
+        })}
 
         <polygon
           className="focus"
