@@ -12,6 +12,29 @@ const OPTIONS: LayoutOptions = {
   minRegions: 6,
 };
 
+/** Rozvržení z konkrétního semínka — pro případy, kde na semínku záleží. */
+function layoutFor(columns: number, rows: number, seed: number, options: LayoutOptions = OPTIONS) {
+  const { diagram, interior } = makeDiagram(columns, rows);
+  const layout = buildLayout(diagram, interior, options, createRandom(seed));
+
+  expect(layout, `mřížka ${columns}×${rows}, semínko ${seed}`).not.toBeNull();
+  return layout as NonNullable<typeof layout>;
+}
+
+function isWhole(layout: readonly { neighbours: readonly number[] }[]): boolean {
+  const seen = new Set([0]);
+  const queue = [0];
+  while (queue.length > 0) {
+    for (const neighbour of layout[queue.pop() as number]?.neighbours ?? []) {
+      if (!seen.has(neighbour)) {
+        seen.add(neighbour);
+        queue.push(neighbour);
+      }
+    }
+  }
+  return seen.size === layout.length;
+}
+
 /** První semínko, se kterým se z dané mřížky rozvržení povede. */
 function firstLayout(columns: number, rows: number, options: LayoutOptions = OPTIONS) {
   const { diagram, interior } = makeDiagram(columns, rows);
@@ -65,18 +88,29 @@ describe('buildLayout', () => {
   });
 
   it('mapa drží pohromadě — ze všech regionů se dá dojít všude', () => {
-    const seen = new Set([0]);
-    const queue = [0];
-    while (queue.length > 0) {
-      for (const neighbour of layout[queue.pop() as number]?.neighbours ?? []) {
-        if (!seen.has(neighbour)) {
-          seen.add(neighbour);
-          queue.push(neighbour);
-        }
-      }
-    }
+    expect(isWhole(layout)).toBe(true);
+  });
 
-    expect(seen.size).toBe(layout.length);
+  it('nezaplaví region, kterým mapa drží pohromadě', () => {
+    // Semínko 111 na mřížce 9×8 vede na šíji: zaplavení jednoho regionu by
+    // pevninu rozdělilo, takže generátor musí sáhnout po jiném.
+    const narrow = layoutFor(9, 8, 111);
+
+    expect(isWhole(narrow)).toBe(true);
+    expect(narrow.length).toBeGreaterThanOrEqual(OPTIONS.minRegions);
+  });
+
+  it('nesloučí regiony, které by kolem někoho uzavřely kruh', () => {
+    // Semínko 10 na mřížce 9×8: osamělý region má souseda, se kterým by
+    // dohromady obklíčily třetí region. Takové sloučení se musí zahodit,
+    // jinak by vznikl obrys s dírou uprostřed.
+    const ringed = layoutFor(9, 8, 10, { ...OPTIONS, maxNeighbours: 4 });
+    expect(ringed.length).toBeGreaterThanOrEqual(OPTIONS.minRegions);
+
+    for (const region of ringed) {
+      expect(new Set(region.outline)).toHaveProperty('size', region.outline.length);
+      expect(polygonArea(region.outline)).toBeGreaterThan(0);
+    }
   });
 
   it('některé regiony leží u vody', () => {

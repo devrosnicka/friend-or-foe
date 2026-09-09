@@ -91,9 +91,17 @@ i backendu bez přepisování herních pravidel.
   vykreslení, pravidla ho neznají).
 - Pohyb a expanze jsou možné **pouze mezi sousedními regiony**.
 - Mapa se **generuje ze semínka** (`createWorldFromSeed`): body v mřížce →
-  Delaunay → Voronoi → slití buněk do nepravidelně velkých regionů → zaplavení
-  části z nich mořem, dokud nemá **každý region 3 až 5 sousedů**. Semínko musí
-  přijít zvenčí, engine sám na `Date.now()` ani `Math.random()` nesahá.
+  Delaunay → Voronoi → slití buněk do nepravidelně velkých regionů → doladění,
+  dokud nemá **každý region 3 až 5 sousedů** (`minNeighbours`/`maxNeighbours`).
+  Semínko musí přijít zvenčí, engine sám na `Date.now()` ani `Math.random()`
+  nesahá.
+- Doladění má dva nástroje a oba ubírají jeden region, takže smyčka vždy skončí:
+  region s **moc sousedy** připraví o jednoho tím, že se soused zaplaví mořem
+  (odtud zátoky a jezera); region s **málo sousedy** pohltí souseda a tím si
+  jich přibere. Bez pohlcování by regiony u pobřeží musely mizet a kaskáda by
+  ukusovala dovnitř, dokud by z mapy nezbylo nic.
+- Podlaha 6 a výš je **nemožná z principu**: mapa je rovinný graf, kde
+  `2E ≤ 6n − 12`, takže aspoň jeden region má vždy nejvýš pět sousedů.
 - Terén: `plains`, `forest`, `hills`, `mountains`, `coast`.
 - Ekonomika prototypu má **jednu univerzální surovinu `production`**
   (abstrakce dřeva, kamene, práce). Nezavádět další běžné suroviny.

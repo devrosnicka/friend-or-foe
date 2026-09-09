@@ -6,11 +6,11 @@ import type { Point } from '../types';
 
 /** Největší region vznikne slitím tolika Voronoi buněk. */
 const MAX_GROUP_CELLS = 3;
-/** Kolikrát víc váží soused sražený pod minimum než soused sražený na minimum. */
-const STARVED_PENALTY = 6;
-
 /** Podíl slitých regionů, které dostanou třetí buňku místo druhé. */
 const TRIPLE_SHARE = 0.35;
+
+/** Kolikrát víc váží soused sražený pod minimum než soused sražený na minimum. */
+const STARVED_PENALTY = 6;
 
 export interface LayoutOptions {
   /** Kolik sousedů smí mít region. Mimo tento rozsah se rozvržení zahodí. */
@@ -34,9 +34,15 @@ export interface RegionLayout {
   readonly coastal: boolean;
 }
 
-interface Group {
-  readonly cells: number[];
-  readonly ring: number[];
+/**
+ * Region během skládání mapy. Na rozdíl od výsledku se ještě mění: může
+ * pohltit souseda nebo sám zmizet pod vodou.
+ */
+interface Territory {
+  cells: number[];
+  ring: number[];
+  /** Jen žijící sousedé; zaplavený region se ze seznamů rovnou vyškrtne. */
+  readonly neighbours: Set<number>;
 }
 
 /**
@@ -48,16 +54,16 @@ function growGroups(
   playable: readonly number[],
   mergeChance: number,
   random: Random,
-): Group[] {
+): { cells: number[]; ring: number[] }[] {
   const free = new Set(playable);
-  const groups: Group[] = [];
+  const groups: { cells: number[]; ring: number[] }[] = [];
 
   for (const start of random.shuffle(playable)) {
     if (!free.has(start)) {
       continue;
     }
 
-    const group: Group = { cells: [start], ring: [...(diagram.cells[start] as VoronoiCell).ring] };
+    const group = { cells: [start], ring: [...(diagram.cells[start] as VoronoiCell).ring] };
     groups.push(group);
     free.delete(start);
 
@@ -96,12 +102,15 @@ function growGroups(
   return groups;
 }
 
-/** Sousednosti mezi skupinami odvozené ze sousedností buněk. */
-function groupAdjacency(diagram: VoronoiDiagram, groups: readonly Group[]): number[][] {
-  const groupOfCell = new Map<number, number>();
+/** Ze skupin buněk udělá regiony a propojí je podle sousedností buněk. */
+function toTerritories(
+  diagram: VoronoiDiagram,
+  groups: readonly { cells: number[]; ring: number[] }[],
+): Territory[] {
+  const owner = new Map<number, number>();
   groups.forEach((group, index) => {
     for (const cell of group.cells) {
-      groupOfCell.set(cell, index);
+      owner.set(cell, index);
     }
   });
 
@@ -109,17 +118,17 @@ function groupAdjacency(diagram: VoronoiDiagram, groups: readonly Group[]): numb
     const neighbours = new Set<number>();
     for (const cell of group.cells) {
       for (const other of (diagram.cells[cell] as VoronoiCell).neighbours) {
-        const otherGroup = groupOfCell.get(other);
+        const otherGroup = owner.get(other);
         if (otherGroup !== undefined && otherGroup !== index) {
           neighbours.add(otherGroup);
         }
       }
     }
-    return [...neighbours].sort((a, b) => a - b);
+    return { cells: [...group.cells], ring: [...group.ring], neighbours };
   });
 }
 
-function isConnected(alive: ReadonlySet<number>, adjacency: readonly number[][]): boolean {
+function isConnected(territories: readonly Territory[], alive: ReadonlySet<number>): boolean {
   const [first] = alive;
   if (first === undefined) {
     return false;
@@ -128,8 +137,8 @@ function isConnected(alive: ReadonlySet<number>, adjacency: readonly number[][])
   const seen = new Set([first]);
   const queue = [first];
   while (queue.length > 0) {
-    for (const neighbour of adjacency[queue.pop() as number] as number[]) {
-      if (alive.has(neighbour) && !seen.has(neighbour)) {
+    for (const neighbour of (territories[queue.pop() as number] as Territory).neighbours) {
+      if (!seen.has(neighbour)) {
         seen.add(neighbour);
         queue.push(neighbour);
       }
@@ -139,73 +148,144 @@ function isConnected(alive: ReadonlySet<number>, adjacency: readonly number[][])
   return seen.size === alive.size;
 }
 
+/** Zaplaví region mořem. Vrátí false, když by tím mapa spadla na ostrovy. */
+function drown(territories: readonly Territory[], alive: Set<number>, victim: number): boolean {
+  const lost = territories[victim] as Territory;
+  for (const neighbour of lost.neighbours) {
+    (territories[neighbour] as Territory).neighbours.delete(victim);
+  }
+  alive.delete(victim);
+
+  if (isConnected(territories, alive)) {
+    return true;
+  }
+
+  alive.add(victim);
+  for (const neighbour of lost.neighbours) {
+    (territories[neighbour] as Territory).neighbours.add(victim);
+  }
+  return false;
+}
+
 /**
- * Zaplaví část skupin mořem, dokud nemá každý zbylý region tolik sousedů,
- * kolik dovoluje `minNeighbours`..`maxNeighbours`.
- *
- * Voronoi mozaika má ve vnitrozemí zhruba šest sousedů na buňku, takže horní
- * hranici jde udržet jedině tím, že se mezi regiony objeví voda. Odebírá se
- * vždy jeden region: buď takový, který sám do rozsahu nespadá, nebo soused
- * přelidněného. Z několika možností vyhrává ta, která uleví nejvíc
- * přelidněným regionům a nejméně jich přitom srazí pod minimum.
+ * Nechá `host` pohltit souseda `guest`. Vrátí false, když by z těch dvou
+ * nevznikl jeden prostý obrys — třeba když by spolu uzavřely region uvnitř.
  */
-function carveSea(
-  adjacency: readonly number[][],
-  coastal: readonly boolean[],
+function absorb(territories: readonly Territory[], alive: Set<number>, host: number, guest: number): boolean {
+  const keeper = territories[host] as Territory;
+  const eaten = territories[guest] as Territory;
+
+  const merged = unionRings([keeper.ring, eaten.ring]);
+  if (merged === null) {
+    return false;
+  }
+
+  keeper.cells = [...keeper.cells, ...eaten.cells];
+  keeper.ring = merged;
+
+  for (const neighbour of eaten.neighbours) {
+    const other = territories[neighbour] as Territory;
+    other.neighbours.delete(guest);
+    if (neighbour !== host) {
+      other.neighbours.add(host);
+      keeper.neighbours.add(neighbour);
+    }
+  }
+  keeper.neighbours.delete(guest);
+  alive.delete(guest);
+  return true;
+}
+
+/**
+ * Doladí mapu, dokud nemá každý region sousedů v požadovaném rozsahu.
+ *
+ * Voronoi mozaika má ve vnitrozemí zhruba šest sousedů na buňku, takže na
+ * obě hranice je potřeba jiný nástroj:
+ *
+ * - **Moc sousedů** — jeden ze sousedů se zaplaví mořem. Odtud zátoky a jezera.
+ * - **Málo sousedů** — region pohltí souseda a tím si jich přibere. Bez toho
+ *   by regiony u pobřeží, které mají tři sousedy z podstaty, musely mizet,
+ *   a jejich zmizením by se pobřežím stalo vnitrozemí za nimi. Kaskáda by
+ *   ukusovala dovnitř, dokud by z mapy nezbylo nic.
+ *
+ * Obě operace ubírají jeden region, takže smyčka vždycky skončí.
+ */
+function repair(
+  diagram: VoronoiDiagram,
+  territories: readonly Territory[],
   options: LayoutOptions,
   random: Random,
 ): Set<number> | null {
-  const alive = new Set(adjacency.map((_, index) => index));
-  const livingNeighbours = (group: number): number[] =>
-    (adjacency[group] as number[]).filter((neighbour) => alive.has(neighbour));
-  const degree = (group: number): number => livingNeighbours(group).length;
+  const alive = new Set(territories.map((_, index) => index));
+  const degree = (group: number): number => (territories[group] as Territory).neighbours.size;
+  const living = (group: number): number[] => [...(territories[group] as Territory).neighbours];
 
-  const remove = (victim: number): boolean => {
-    alive.delete(victim);
-    if (isConnected(alive, adjacency)) {
-      return true;
-    }
-    alive.add(victim);
-    return false;
+  /** Kolik sousedů by po zásahu spadlo pod minimum. */
+  const damage = (dropping: readonly number[]): number =>
+    dropping.reduce((total, neighbour) => {
+      const after = degree(neighbour) - 1;
+      return (
+        total +
+        (after < options.minNeighbours ? STARVED_PENALTY : 0) +
+        (after === options.minNeighbours ? 1 : 0)
+      );
+    }, 0);
+
+  /** Osamělý region si přibere souseda; když to nejde, zmizí pod vodou. */
+  const grow = (group: number): boolean => {
+    const mine = new Set(living(group));
+    const scored = [...mine]
+      .map((candidate) => {
+        const union = new Set([...mine, ...living(candidate)]);
+        union.delete(group);
+        union.delete(candidate);
+        const shared = living(candidate).filter((neighbour) => mine.has(neighbour));
+        return {
+          candidate,
+          fits: union.size <= options.maxNeighbours ? 0 : 1,
+          damage: damage(shared),
+          size: union.size,
+        };
+      })
+      .sort(
+        (left, right) =>
+          left.fits - right.fits ||
+          left.damage - right.damage ||
+          right.size - left.size ||
+          left.candidate - right.candidate,
+      );
+
+    return (
+      scored.some((option) => absorb(territories, alive, group, option.candidate)) ||
+      drown(territories, alive, group)
+    );
   };
 
-  for (;;) {
-    const crowded = [...alive].filter((group) => degree(group) > options.maxNeighbours);
-    const lonely = [...alive].filter((group) => degree(group) < options.minNeighbours);
-    if (crowded.length === 0 && lonely.length === 0) {
-      break;
-    }
-
-    // Region pod minimem musí pryč tak jako tak, takže má přednost.
-    const candidates =
-      lonely.length > 0
-        ? lonely
-        : [...new Set(crowded.flatMap((group) => livingNeighbours(group)))];
-
+  /** Přelidněnému regionu se ubere soused. */
+  const thin = (crowded: readonly number[]): boolean => {
     const crowdedSet = new Set(crowded);
-    const relief = (victim: number): number =>
-      (adjacency[victim] as number[]).filter((neighbour) => crowdedSet.has(neighbour)).length;
-    // Soused sražený pod minimum je chyba, soused sražený přesně na minimum
-    // jen ochuzuje mapu — proto se počítá jako menší škoda.
-    const damage = (victim: number): number =>
-      livingNeighbours(victim).reduce((total, neighbour) => {
-        const after = degree(neighbour) - 1;
-        return (
-          total +
-          (after < options.minNeighbours ? STARVED_PENALTY : 0) +
-          (after === options.minNeighbours ? 1 : 0)
-        );
-      }, 0);
-
-    const ordered = [...candidates].sort(
+    const victims = [...new Set(crowded.flatMap(living))].sort(
       (left, right) =>
-        damage(left) - damage(right) ||
-        relief(right) - relief(left) ||
+        damage(living(left)) - damage(living(right)) ||
+        living(right).filter((n) => crowdedSet.has(n)).length -
+          living(left).filter((n) => crowdedSet.has(n)).length ||
         degree(left) - degree(right) ||
         left - right,
     );
 
-    if (!ordered.some((victim) => remove(victim))) {
+    return victims.some((victim) => drown(territories, alive, victim));
+  };
+
+  for (;;) {
+    const lonely = [...alive]
+      .filter((group) => degree(group) < options.minNeighbours)
+      .sort((left, right) => degree(left) - degree(right) || left - right);
+    const crowded = [...alive].filter((group) => degree(group) > options.maxNeighbours);
+
+    if (lonely.length === 0 && crowded.length === 0) {
+      break;
+    }
+    if (!(lonely.length > 0 ? grow(lonely[0] as number) : thin(crowded))) {
       return null;
     }
     if (alive.size < options.minRegions) {
@@ -214,14 +294,15 @@ function carveSea(
   }
 
   // Pobřeží se okusuje až nakonec — je to kosmetika a nesmí rozbít rozsah.
+  const shore = coastal(diagram, territories, alive);
   for (const group of random.shuffle([...alive])) {
     const safe =
-      coastal[group] === true &&
+      shore[group] === true &&
       random.next() < options.coastErosion &&
       alive.size - 1 >= options.minRegions &&
-      livingNeighbours(group).every((neighbour) => degree(neighbour) - 1 >= options.minNeighbours);
+      living(group).every((neighbour) => degree(neighbour) - 1 >= options.minNeighbours);
     if (safe) {
-      remove(group);
+      drown(territories, alive, group);
     }
   }
 
@@ -229,24 +310,21 @@ function carveSea(
 }
 
 /** Region leží u vody, když některá jeho buňka sousedí s mořem nebo s okrajem. */
-function coastalGroups(
+function coastal(
   diagram: VoronoiDiagram,
-  groups: readonly Group[],
+  territories: readonly Territory[],
   alive: ReadonlySet<number>,
 ): boolean[] {
-  const groupOfCell = new Map<number, number>();
-  groups.forEach((group, index) => {
-    for (const cell of group.cells) {
-      groupOfCell.set(cell, index);
+  const owner = new Map<number, number>();
+  for (const group of alive) {
+    for (const cell of (territories[group] as Territory).cells) {
+      owner.set(cell, group);
     }
-  });
+  }
 
-  return groups.map((group) =>
-    group.cells.some((cell) =>
-      (diagram.cells[cell] as VoronoiCell).neighbours.some((other) => {
-        const otherGroup = groupOfCell.get(other);
-        return otherGroup === undefined || !alive.has(otherGroup);
-      }),
+  return territories.map((territory) =>
+    territory.cells.some((cell) =>
+      (diagram.cells[cell] as VoronoiCell).neighbours.some((other) => !owner.has(other)),
     ),
   );
 }
@@ -255,10 +333,10 @@ function coastalGroups(
  * Popisný bod regionu. Těžiště plochy může u konkávního tvaru vypadnout ven,
  * proto se vrací nejbližší Voronoi bod — ten leží uvnitř vždy.
  */
-function labelPoint(diagram: VoronoiDiagram, group: Group, outline: readonly Point[]): Point {
+function labelPoint(diagram: VoronoiDiagram, cells: readonly number[], outline: readonly Point[]): Point {
   const centroid = polygonCentroid(outline);
-  let best = (diagram.cells[group.cells[0] as number] as VoronoiCell).site;
-  for (const cell of group.cells) {
+  let best = (diagram.cells[cells[0] as number] as VoronoiCell).site;
+  for (const cell of cells) {
     const site = (diagram.cells[cell] as VoronoiCell).site;
     if (distanceSquared(site, centroid) < distanceSquared(best, centroid)) {
       best = site;
@@ -285,36 +363,35 @@ export function buildLayout(
   random: Random,
 ): RegionLayout[] | null {
   const playable = interior.filter((index) => diagram.cells[index] !== null);
-  const groups = growGroups(diagram, playable, options.mergeChance, random);
-  const adjacency = groupAdjacency(diagram, groups);
-  const everyoneAlive = new Set(groups.map((_, index) => index));
+  const territories = toTerritories(
+    diagram,
+    growGroups(diagram, playable, options.mergeChance, random),
+  );
 
-  const alive = carveSea(adjacency, coastalGroups(diagram, groups, everyoneAlive), options, random);
+  const alive = repair(diagram, territories, options, random);
   if (alive === null) {
     return null;
   }
 
-  const coastal = coastalGroups(diagram, groups, alive);
+  const shore = coastal(diagram, territories, alive);
   const kept = [...alive].sort((left, right) => {
-    const a = polygonCentroid((groups[left] as Group).ring.map((v) => diagram.vertices[v] as Point));
-    const b = polygonCentroid(
-      (groups[right] as Group).ring.map((v) => diagram.vertices[v] as Point),
-    );
+    const a = polygonCentroid((territories[left] as Territory).ring.map((v) => diagram.vertices[v] as Point));
+    const b = polygonCentroid((territories[right] as Territory).ring.map((v) => diagram.vertices[v] as Point));
     return a.y - b.y || a.x - b.x;
   });
   const positionOf = new Map(kept.map((group, index) => [group, index]));
 
   return kept.map((group): RegionLayout => {
-    const source = groups[group] as Group;
-    const outline = source.ring.map((vertex) => diagram.vertices[vertex] as Point);
+    const territory = territories[group] as Territory;
+    const outline = territory.ring.map((vertex) => diagram.vertices[vertex] as Point);
     return {
       outline,
-      centre: labelPoint(diagram, source, outline),
+      centre: labelPoint(diagram, territory.cells, outline),
       area: polygonArea(outline),
-      neighbours: (adjacency[group] as number[])
-        .filter((neighbour) => alive.has(neighbour))
+      neighbours: [...territory.neighbours]
+        .sort((a, b) => a - b)
         .map((neighbour) => positionOf.get(neighbour) as number),
-      coastal: coastal[group] as boolean,
+      coastal: shore[group] as boolean,
     };
   });
 }
