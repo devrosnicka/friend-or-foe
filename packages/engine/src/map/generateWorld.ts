@@ -2,7 +2,7 @@ import { buildLayout, type LayoutOptions, type RegionLayout } from './layout';
 import { buildVoronoi, type VoronoiDiagram } from './voronoi';
 import { createRandom, type Random } from './random';
 import { distanceSquared } from './geometry';
-import { REGION_NAMES } from './names';
+import { makeNamePool } from './names';
 import type {
   Player,
   PlayerId,
@@ -142,7 +142,7 @@ function assembleWorld(
   random: Random,
 ): World {
   const terrain = assignTerrain(layout, random);
-  const names = random.shuffle(REGION_NAMES);
+  const names = makeNamePool(layout.length, random);
   const ids = layout.map((_, index): RegionId => `r${index}`);
 
   const middle = layout.reduce(
@@ -169,7 +169,7 @@ function assembleWorld(
     const id = ids[index] as RegionId;
     regions[id] = {
       id,
-      name: names[index % names.length] as string,
+      name: names[index] as string,
       terrain: kind,
       neighbours: region.neighbours.map((neighbour) => ids[neighbour] as RegionId),
       owner: index === home ? options.playerId : null,

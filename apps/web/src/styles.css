@@ -71,9 +71,75 @@ button.secondary {
   /* min-width: 0 nechá SVG zmenšit se pod svou vnitřní šířku, jinak layout přeteče. */
   min-width: 0;
   height: calc(100vh - 130px);
+  position: relative;
   background: var(--sea);
   border: 1px solid var(--line);
   border-radius: 6px;
+  overflow: hidden;
+}
+
+.region-map > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.region-map.empty {
+  display: grid;
+  place-content: center;
+  color: var(--muted);
+}
+
+/* Ovládání leží nad mapou, aby výřez zabral celou plochu. */
+.map-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.zoom-levels {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.zoom-levels button {
+  background: #1b232ad9;
+  color: var(--muted);
+  border: 0;
+  border-radius: 0;
+  padding: 5px 11px;
+  font-weight: 500;
+}
+
+.zoom-levels button + button {
+  border-left: 1px solid var(--line);
+}
+
+.zoom-levels button.active {
+  background: var(--accent);
+  color: #1a1a1a;
+}
+
+.map-controls .secondary {
+  background: #1b232ad9;
+}
+
+.map-status {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #1b232ad9;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
 }
 
 /* Pobřežní lem se kreslí pod pevninou; vidět je jen ta část, která přesahuje. */
@@ -82,6 +148,7 @@ button.secondary {
   stroke: var(--shore);
   stroke-width: 12;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .region {
@@ -141,21 +208,17 @@ button.secondary {
   fill: #f2f2f2;
   paint-order: stroke;
   stroke: #0008;
-  stroke-width: 3px;
 }
 
 .region-name {
-  font-size: 13px;
   font-weight: 600;
 }
 
 .region-resource {
-  font-size: 11px;
   fill: var(--accent);
 }
 
 .region-buildings {
-  font-size: 14px;
   letter-spacing: 2px;
 }
 

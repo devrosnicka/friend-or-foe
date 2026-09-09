@@ -34,6 +34,11 @@ apps/api/          Fastify: validace vstupu, volání enginu, JSON persistence
 apps/web/          Vite + React: SVG mapa regionů a panel regionu
 ```
 
+Mapa v UI je **výřez, ne celý svět**: kamera stojí na jednom regionu, tři
+úrovně přiblížení určují, kolik okolí je vidět, a co se do výřezu nevejde, se
+nevykreslí. Na mapě o stovkách regionů je to rozdíl mezi několika desítkami
+tvarů a všemi. Kliknutí na region ho zároveň vybere i vycentruje.
+
 Pravidla, která drží architekturu pohromadě:
 
 - Do `packages/engine` nesmí přibýt runtime závislost, I/O ani nic z prohlížeče.
@@ -102,6 +107,9 @@ i backendu bez přepisování herních pravidel.
   ukusovala dovnitř, dokud by z mapy nezbylo nic.
 - Podlaha 6 a výš je **nemožná z principu**: mapa je rovinný graf, kde
   `2E ≤ 6n − 12`, takže aspoň jeden region má vždy nejvýš pět sousedů.
+- Jména regionů se skládají jako anglická místní jména (kořen + přípona:
+  Ashford, Thornbury). Tabulky v `map/names.ts` unesou přes 45 tisíc jmen,
+  takže se na mapě o stovkách regionů žádné neopakuje.
 - Terén: `plains`, `forest`, `hills`, `mountains`, `coast`.
 - Ekonomika prototypu má **jednu univerzální surovinu `production`**
   (abstrakce dřeva, kamene, práce). Nezavádět další běžné suroviny.

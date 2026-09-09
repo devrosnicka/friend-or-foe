@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateWorld, type WorldOptions } from '../src/map/generateWorld';
 import { STARTER_OPTIONS } from '../src/map/starterMap';
-import { REGION_NAMES } from '../src/map/names';
 
 const SEEDS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
 
@@ -55,7 +54,7 @@ describe('generateWorld', () => {
     const names = regions.map((region) => region.name);
 
     expect(new Set(names).size).toBe(names.length);
-    expect(names.every((name) => REGION_NAMES.includes(name))).toBe(true);
+    expect(names.every((name) => /^[A-Z][a-z]+$/.test(name))).toBe(true);
 
     for (const region of regions) {
       expect(region.resources.length).toBeLessThanOrEqual(1);
