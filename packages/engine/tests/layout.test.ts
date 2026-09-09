@@ -1,0 +1,106 @@
+import { describe, expect, it } from 'vitest';
+import { buildLayout, MAX_NEIGHBOURS, MIN_NEIGHBOURS, type LayoutOptions } from '../src/map/layout';
+import { createRandom } from '../src/map/random';
+import { polygonArea } from '../src/map/geometry';
+import { contains, makeDiagram } from './helpers/diagram';
+
+const OPTIONS: LayoutOptions = { mergeChance: 0.45, coastErosion: 0.2, minRegions: 6 };
+
+/** První semínko, se kterým se z dané mřížky rozvržení povede. */
+function firstLayout(columns: number, rows: number, options: LayoutOptions = OPTIONS) {
+  const { diagram, interior } = makeDiagram(columns, rows);
+  for (let seed = 1; seed < 200; seed += 1) {
+    const layout = buildLayout(diagram, interior, options, createRandom(seed));
+    if (layout !== null) {
+      return layout;
+    }
+  }
+  throw new Error('Testovací mřížka nedala ani jedno rozvržení.');
+}
+
+describe('buildLayout', () => {
+  const layout = firstLayout(9, 8);
+
+  it('každý region má tři až pět sousedů', () => {
+    for (const region of layout) {
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(MIN_NEIGHBOURS);
+      expect(region.neighbours.length).toBeLessThanOrEqual(MAX_NEIGHBOURS);
+    }
+  });
+
+  it('sousednosti jsou vzájemné a nikdo nesousedí sám se sebou', () => {
+    layout.forEach((region, index) => {
+      expect(region.neighbours).not.toContain(index);
+      for (const neighbour of region.neighbours) {
+        expect(layout[neighbour]?.neighbours).toContain(index);
+      }
+    });
+  });
+
+  it('obrysy jsou prosté mnohoúhelníky s kladnou plochou', () => {
+    for (const region of layout) {
+      expect(region.outline.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(region.outline)).toHaveProperty('size', region.outline.length);
+      expect(polygonArea(region.outline)).toBeCloseTo(region.area);
+      expect(region.area).toBeGreaterThan(0);
+    }
+  });
+
+  it('popisný bod leží uvnitř regionu', () => {
+    for (const region of layout) {
+      expect(contains(region.outline, region.centre)).toBe(true);
+    }
+  });
+
+  it('regiony jsou nepravidelně velké', () => {
+    const areas = layout.map((region) => region.area);
+
+    expect(Math.max(...areas) / Math.min(...areas)).toBeGreaterThan(1.5);
+  });
+
+  it('mapa drží pohromadě — ze všech regionů se dá dojít všude', () => {
+    const seen = new Set([0]);
+    const queue = [0];
+    while (queue.length > 0) {
+      for (const neighbour of layout[queue.pop() as number]?.neighbours ?? []) {
+        if (!seen.has(neighbour)) {
+          seen.add(neighbour);
+          queue.push(neighbour);
+        }
+      }
+    }
+
+    expect(seen.size).toBe(layout.length);
+  });
+
+  it('některé regiony leží u vody', () => {
+    expect(layout.some((region) => region.coastal)).toBe(true);
+  });
+
+  it('bez slévání vzniknou jen konvexní buňky, se sléváním i větší regiony', () => {
+    const plain = firstLayout(9, 8, { ...OPTIONS, mergeChance: 0 });
+    const merged = firstLayout(9, 8, { ...OPTIONS, mergeChance: 1 });
+
+    expect(Math.max(...merged.map((r) => r.area))).toBeGreaterThan(
+      Math.max(...plain.map((r) => r.area)),
+    );
+  });
+
+  it('okusování pobřeží se dá vypnout i zapnout naplno', () => {
+    expect(firstLayout(9, 8, { ...OPTIONS, coastErosion: 0 }).length).toBeGreaterThan(0);
+    expect(firstLayout(9, 8, { ...OPTIONS, coastErosion: 1 }).length).toBeGreaterThan(0);
+  });
+
+  it('vrátí null, když by mapa klesla pod požadovaný počet regionů', () => {
+    const { diagram, interior } = makeDiagram(9, 8);
+
+    expect(buildLayout(diagram, interior, { ...OPTIONS, minRegions: 500 }, createRandom(1))).toBeNull();
+  });
+
+  it('vrátí null, když je uvnitř jediná buňka', () => {
+    const { diagram, interior } = makeDiagram(3, 3);
+
+    expect(interior).toHaveLength(1);
+    expect(buildLayout(diagram, interior, OPTIONS, createRandom(1))).toBeNull();
+  });
+});

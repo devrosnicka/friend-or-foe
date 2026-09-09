@@ -1,4 +1,4 @@
-import { createStarterWorld, type World } from '@fof/engine';
+import { createWorldFromSeed, type World } from '@fof/engine';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
@@ -29,8 +29,12 @@ export async function saveWorld(world: World): Promise<void> {
   await rename(tmpFile, DATA_FILE);
 }
 
+/**
+ * Nová hra znamená novou mapu, takže semínko musí přijít zvenčí — engine
+ * sám na hodiny ani na `Math.random()` sáhnout nesmí.
+ */
 export async function resetWorld(): Promise<World> {
-  const world = createStarterWorld();
+  const world = createWorldFromSeed(Date.now() >>> 0);
   await saveWorld(world);
   return world;
 }

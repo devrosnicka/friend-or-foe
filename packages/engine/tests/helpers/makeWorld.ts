@@ -1,7 +1,15 @@
-import type { Player, PlayerId, Region, RegionId, World } from '../../src/types';
+import type { Player, PlayerId, Point, Region, RegionId, World } from '../../src/types';
 import { deepFreeze } from './deepFreeze';
 
 export const PLAYER_ID = 'p1';
+
+/** Tvar regionu pravidla nezajímá, testům stačí libovolný platný obrys. */
+const SQUARE: readonly Point[] = [
+  { x: -1, y: -1 },
+  { x: 1, y: -1 },
+  { x: 1, y: 1 },
+  { x: -1, y: 1 },
+];
 
 export function makeRegion(id: RegionId, patch: Partial<Region> = {}): Region {
   return {
@@ -12,7 +20,7 @@ export function makeRegion(id: RegionId, patch: Partial<Region> = {}): Region {
     owner: null,
     resources: [],
     buildings: [],
-    position: { q: 0, r: 0 },
+    shape: { outline: SQUARE, centre: { x: 0, y: 0 } },
     ...patch,
   };
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createStarterWorld, STARTER_PLAYER_ID } from '../src/map/starterMap';
+import { createStarterWorld, createWorldFromSeed, STARTER_PLAYER_ID } from '../src/map/starterMap';
+import { MAX_NEIGHBOURS, MIN_NEIGHBOURS } from '../src/map/layout';
 
 describe('createStarterWorld', () => {
   const world = createStarterWorld();
@@ -7,10 +8,6 @@ describe('createStarterWorld', () => {
 
   it('je deterministická', () => {
     expect(createStarterWorld()).toEqual(world);
-  });
-
-  it('má 19 regionů (hexové pole o poloměru 2)', () => {
-    expect(regions).toHaveLength(19);
   });
 
   it('začíná prvním tahem a jedním hráčem', () => {
@@ -49,12 +46,17 @@ describe('createStarterWorld', () => {
     }
   });
 
-  it('vnitřní hex má šest sousedů, okrajové méně', () => {
-    const center = world.regions['0,0'];
-    const corner = world.regions['2,0'];
+  it('každý region má tři až pět sousedů', () => {
+    for (const region of regions) {
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(MIN_NEIGHBOURS);
+      expect(region.neighbours.length).toBeLessThanOrEqual(MAX_NEIGHBOURS);
+    }
+  });
 
-    expect(center?.neighbours).toHaveLength(6);
-    expect(corner?.neighbours).toHaveLength(3);
+  it('regiony jsou nepravidelně velké a nepravidelně tvarované', () => {
+    const corners = regions.map((region) => region.shape.outline.length);
+
+    expect(new Set(corners).size).toBeGreaterThan(2);
   });
 
   it('žádný region nezačíná s budovami', () => {
@@ -63,5 +65,15 @@ describe('createStarterWorld', () => {
 
   it('některé regiony nesou strategické suroviny', () => {
     expect(regions.filter((region) => region.resources.length > 0).length).toBeGreaterThan(0);
+  });
+});
+
+describe('createWorldFromSeed', () => {
+  it('ze stejného semínka udělá stejnou mapu', () => {
+    expect(createWorldFromSeed(123)).toEqual(createWorldFromSeed(123));
+  });
+
+  it('z jiného semínka udělá jinou mapu', () => {
+    expect(createWorldFromSeed(123)).not.toEqual(createWorldFromSeed(124));
   });
 });

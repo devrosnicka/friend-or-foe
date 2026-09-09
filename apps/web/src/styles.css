@@ -8,6 +8,8 @@
   --accent: #d8b64a;
   --mine: #7c5cd6;
   --foreign: #c0483c;
+  --sea: #16303f;
+  --shore: #2d6379;
 }
 
 * {
@@ -64,56 +66,76 @@ button.secondary {
   align-items: flex-start;
 }
 
-.hex-map {
+.region-map {
   flex: 1 1 auto;
   /* min-width: 0 nechá SVG zmenšit se pod svou vnitřní šířku, jinak layout přeteče. */
   min-width: 0;
   height: calc(100vh - 130px);
+  background: var(--sea);
+  border: 1px solid var(--line);
+  border-radius: 6px;
 }
 
-.hex {
+/* Pobřežní lem se kreslí pod pevninou; vidět je jen ta část, která přesahuje. */
+.shoreline polygon {
+  fill: none;
+  stroke: var(--shore);
+  stroke-width: 12;
+  stroke-linejoin: round;
+}
+
+.region {
   cursor: pointer;
 }
 
-.hex:focus {
+.region:focus {
   outline: none;
 }
 
-.hex:focus-visible .outline {
+.region:focus-visible .outline {
   stroke: var(--text);
   stroke-width: 4;
 }
 
-.hex .owner-overlay {
+.region .owner-overlay {
   fill: transparent;
 }
 
-.hex.mine .owner-overlay {
+.region.mine .owner-overlay {
   fill: var(--mine);
   opacity: 0.55;
 }
 
-.hex.foreign .owner-overlay {
+.region.foreign .owner-overlay {
   fill: var(--foreign);
   opacity: 0.55;
 }
 
-.hex .outline {
+.region .outline {
   fill: none;
   stroke: #10131699;
   stroke-width: 2;
+  stroke-linejoin: round;
 }
 
-.hex:hover .outline {
+.region:hover .outline {
   stroke: var(--text);
 }
 
-.hex.selected .outline {
+/* Sousedi vybraného regionu — u nepravidelných tvarů se dají špatně odhadnout. */
+.region.adjacent .outline {
   stroke: var(--accent);
-  stroke-width: 4;
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
 }
 
-.hex text {
+.region.selected .outline {
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-dasharray: none;
+}
+
+.region text {
   text-anchor: middle;
   pointer-events: none;
   fill: #f2f2f2;
@@ -122,17 +144,17 @@ button.secondary {
   stroke-width: 3px;
 }
 
-.hex-name {
+.region-name {
   font-size: 13px;
   font-weight: 600;
 }
 
-.hex-resource {
+.region-resource {
   font-size: 11px;
   fill: var(--accent);
 }
 
-.hex-buildings {
+.region-buildings {
   font-size: 14px;
   letter-spacing: 2px;
 }

@@ -7,7 +7,7 @@ import {
   type Region,
   type World,
 } from '@fof/engine';
-import { TERRAIN_LABEL } from './HexMap';
+import { TERRAIN_LABEL } from './RegionMap';
 
 const BUILDING_LABEL: Record<BuildingType, string> = {
   farm: 'farma',

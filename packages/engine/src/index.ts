@@ -1,5 +1,12 @@
 export { applyActions } from './applyActions';
-export { createStarterWorld, STARTER_PLAYER_ID } from './map/starterMap';
+export {
+  createStarterWorld,
+  createWorldFromSeed,
+  STARTER_OPTIONS,
+  STARTER_PLAYER_ID,
+  STARTER_SEED,
+} from './map/starterMap';
+export type { WorldOptions } from './map/generateWorld';
 export { playerIncome, regionProduction } from './rules/production';
 export {
   BASE_REGION_PRODUCTION,
@@ -14,11 +21,12 @@ export type {
   BuildingType,
   ClaimRegionAction,
   EndTurnAction,
-  HexPosition,
+  Point,
   Player,
   PlayerId,
   Region,
   RegionId,
+  RegionShape,
   RuleViolation,
   RuleViolationCode,
   StrategicResource,

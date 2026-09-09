@@ -1,0 +1,100 @@
+import { describe, expect, it } from 'vitest';
+import { generateWorld, type WorldOptions } from '../src/map/generateWorld';
+import { MAX_NEIGHBOURS, MIN_NEIGHBOURS } from '../src/map/layout';
+import { STARTER_OPTIONS } from '../src/map/starterMap';
+import { REGION_NAMES } from '../src/map/names';
+
+const SEEDS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+function withSeed(seed: number): WorldOptions {
+  return { ...STARTER_OPTIONS, seed };
+}
+
+describe('generateWorld', () => {
+  it('je deterministická', () => {
+    expect(generateWorld(withSeed(11))).toEqual(generateWorld(withSeed(11)));
+  });
+
+  it('jiné semínko dá jinou mapu', () => {
+    expect(generateWorld(withSeed(11))).not.toEqual(generateWorld(withSeed(12)));
+  });
+
+  it.each(SEEDS)('semínko %i dá hratelnou mapu', (seed) => {
+    const world = generateWorld(withSeed(seed));
+    const regions = Object.values(world.regions);
+
+    expect(regions.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minRegions);
+    expect(world.turn).toBe(1);
+
+    for (const region of regions) {
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(MIN_NEIGHBOURS);
+      expect(region.neighbours.length).toBeLessThanOrEqual(MAX_NEIGHBOURS);
+      expect(region.neighbours).not.toContain(region.id);
+      expect(region.buildings).toEqual([]);
+      expect(region.shape.outline.length).toBeGreaterThanOrEqual(3);
+
+      for (const neighbour of region.neighbours) {
+        expect(world.regions[neighbour]?.neighbours).toContain(region.id);
+      }
+    }
+  });
+
+  it.each(SEEDS)('semínko %i dá jednoho hráče s jedním startovním regionem', (seed) => {
+    const world = generateWorld(withSeed(seed));
+    const owned = Object.values(world.regions).filter((region) => region.owner !== null);
+
+    expect(Object.keys(world.players)).toEqual([STARTER_OPTIONS.playerId]);
+    expect(owned).toHaveLength(1);
+    expect(owned[0]?.owner).toBe(STARTER_OPTIONS.playerId);
+    expect(world.players[STARTER_OPTIONS.playerId]?.production).toBe(
+      STARTER_OPTIONS.startingProduction,
+    );
+  });
+
+  it.each(SEEDS)('semínko %i dá pojmenované regiony a smysluplné suroviny', (seed) => {
+    const regions = Object.values(generateWorld(withSeed(seed)).regions);
+    const names = regions.map((region) => region.name);
+
+    expect(new Set(names).size).toBe(names.length);
+    expect(names.every((name) => REGION_NAMES.includes(name))).toBe(true);
+
+    for (const region of regions) {
+      expect(region.resources.length).toBeLessThanOrEqual(1);
+      if (region.terrain === 'plains') {
+        expect(region.resources.every((resource) => resource === 'horses')).toBe(true);
+      }
+    }
+  });
+
+  it('dohromady se objeví všechny druhy terénu i strategických surovin', () => {
+    const regions = SEEDS.flatMap((seed) => Object.values(generateWorld(withSeed(seed)).regions));
+
+    expect(new Set(regions.map((region) => region.terrain))).toEqual(
+      new Set(['plains', 'forest', 'hills', 'mountains', 'coast']),
+    );
+    expect(new Set(regions.flatMap((region) => region.resources)).size).toBeGreaterThan(3);
+  });
+
+  it('regiony se nepřekrývají, protože každou hranu sdílí nanejvýš dva z nich', () => {
+    const world = generateWorld(withSeed(4));
+    const edges = new Map<string, number>();
+
+    for (const region of Object.values(world.regions)) {
+      const outline = region.shape.outline;
+      for (let i = 0; i < outline.length; i += 1) {
+        const a = outline[i]!;
+        const b = outline[(i + 1) % outline.length]!;
+        const key = [`${a.x},${a.y}`, `${b.x},${b.y}`].sort().join('|');
+        edges.set(key, (edges.get(key) ?? 0) + 1);
+      }
+    }
+
+    expect([...edges.values()].every((count) => count <= 2)).toBe(true);
+  });
+
+  it('vzdá to, když z tak malé mřížky mapa vzniknout nemůže', () => {
+    expect(() =>
+      generateWorld({ ...STARTER_OPTIONS, columns: 3, rows: 3, attempts: 16 }),
+    ).toThrow(/16 pokusů/);
+  });
+});

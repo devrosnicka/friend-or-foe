@@ -7,10 +7,20 @@ export type StrategicResource = 'iron' | 'coal' | 'horses' | 'oil' | 'gold';
 
 export type BuildingType = 'farm' | 'mine' | 'barracks';
 
-/** Axiální souřadnice hexu. Engine je nepoužívá, slouží jen k vykreslení mapy. */
-export interface HexPosition {
-  readonly q: number;
-  readonly r: number;
+export interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Tvar regionu na mapě. Engine ho nepoužívá, slouží jen k vykreslení —
+ * pravidla znají výhradně seznam sousedů.
+ */
+export interface RegionShape {
+  /** Obrys jako uzavřený mnohoúhelník; první bod se neopakuje na konci. */
+  readonly outline: readonly Point[];
+  /** Bod uvnitř regionu, kam patří popisek. */
+  readonly centre: Point;
 }
 
 export interface Region {
@@ -22,7 +32,7 @@ export interface Region {
   readonly owner: PlayerId | null;
   readonly resources: readonly StrategicResource[];
   readonly buildings: readonly BuildingType[];
-  readonly position: HexPosition;
+  readonly shape: RegionShape;
 }
 
 export interface Player {

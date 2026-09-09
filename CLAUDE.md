@@ -4,8 +4,8 @@ Pokyny pro Claude Code při práci v tomto repozitáři.
 
 ## Stav projektu
 
-Běží první prototyp: hexová mapa v prohlížeči, zabírání regionů, stavba budov,
-plochá ekonomika a ukládání stavu. Bot, boj, diplomacie ani multiplayer zatím
+Běží první prototyp: generovaná mapa nepravidelných regionů v prohlížeči,
+zabírání regionů, stavba budov, plochá ekonomika a ukládání stavu. Bot, boj, diplomacie ani multiplayer zatím
 neexistují — viz „Scope prvního prototypu".
 
 Dokumentace i UI jsou česky, doménové názvy (region, production, plains, iron, …)
@@ -31,7 +31,7 @@ založí novou hru.
 ```
 packages/engine/   herní logika — čisté funkce, ŽÁDNÉ runtime závislosti
 apps/api/          Fastify: validace vstupu, volání enginu, JSON persistence
-apps/web/          Vite + React: SVG hexová mapa a panel regionu
+apps/web/          Vite + React: SVG mapa regionů a panel regionu
 ```
 
 Pravidla, která drží architekturu pohromadě:
@@ -87,8 +87,13 @@ i backendu bez přepisování herních pravidel.
 ## Datový model (prototyp)
 
 - Mapa je **graf regionů**. Každý region: `id`, `name`, `terrain`, seznam
-  sousedů, `owner`, seznam surovin, seznam budov.
+  sousedů, `owner`, seznam surovin, seznam budov a `shape` (obrys pro
+  vykreslení, pravidla ho neznají).
 - Pohyb a expanze jsou možné **pouze mezi sousedními regiony**.
+- Mapa se **generuje ze semínka** (`createWorldFromSeed`): body v mřížce →
+  Delaunay → Voronoi → slití buněk do nepravidelně velkých regionů → zaplavení
+  části z nich mořem, dokud nemá **každý region 3 až 5 sousedů**. Semínko musí
+  přijít zvenčí, engine sám na `Date.now()` ani `Math.random()` nesahá.
 - Terén: `plains`, `forest`, `hills`, `mountains`, `coast`.
 - Ekonomika prototypu má **jednu univerzální surovinu `production`**
   (abstrakce dřeva, kamene, práce). Nezavádět další běžné suroviny.

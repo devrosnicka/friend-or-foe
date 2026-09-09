@@ -2,7 +2,7 @@
 
 Asynchronní strategická webová hra — první prototyp.
 
-Zabírání regionů na hexové mapě, stavba budov a jednoduchá ekonomika.
+Zabírání regionů na generované mapě, stavba budov a jednoduchá ekonomika.
 Herní logika žije v samostatném balíčku jako čistá funkce
 `applyActions(world, actions) -> nový svět`, takže je plně pokrytá unit testy
 a nezávislá na API i na UI.
@@ -29,7 +29,7 @@ npm test           # unit testy enginu, coverage s prahy 100 %
 | --- | --- |
 | `packages/engine` | herní pravidla, mapa, datový model — bez závislostí |
 | `apps/api` | Fastify, validace vstupu, ukládání světa do JSON |
-| `apps/web` | React + SVG hexová mapa |
+| `apps/web` | React + SVG mapa regionů |
 
 Stav světa se ukládá do `apps/api/data/world.json`. Novou hru založí tlačítko
 *Nová hra* nebo `POST /api/reset`.

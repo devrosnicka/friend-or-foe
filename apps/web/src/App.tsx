@@ -1,7 +1,7 @@
 import { playerIncome, STARTER_PLAYER_ID, type BuildingType, type World } from '@fof/engine';
 import { useEffect, useState } from 'react';
 import { fetchWorld, resetWorld, sendActions } from './api';
-import { HexMap } from './HexMap';
+import { RegionMap } from './RegionMap';
 import { RegionPanel } from './RegionPanel';
 
 const CURRENT_PLAYER_ID = STARTER_PLAYER_ID;
@@ -62,7 +62,7 @@ export function App() {
       {error && <p className="error">{error}</p>}
 
       <div className="layout">
-        <HexMap
+        <RegionMap
           world={world}
           currentPlayerId={CURRENT_PLAYER_ID}
           selectedRegionId={selectedRegionId}
