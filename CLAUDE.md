@@ -5,7 +5,9 @@ Pokyny pro Claude Code při práci v tomto repozitáři.
 ## Stav projektu
 
 Běží první prototyp: generovaná mapa nepravidelných regionů v prohlížeči,
-zabírání regionů, stavba budov, plochá ekonomika a ukládání stavu. Bot, boj, diplomacie ani multiplayer zatím
+zabírání regionů, stavba budov, plochá ekonomika a ukládání stavu. Výchozí
+svět má zhruba 660 regionů (mřížka 44×40, okno 3–7, ~23 % vody) a vzniká
+za dvě desetiny sekundy. Bot, boj, diplomacie ani multiplayer zatím
 neexistují — viz „Scope prvního prototypu".
 
 Dokumentace i UI jsou česky, doménové názvy (region, production, plains, iron, …)
@@ -98,7 +100,7 @@ i backendu bez přepisování herních pravidel.
 - Mapa se **generuje ze semínka** (`createWorldFromSeed`): body v mřížce →
   Delaunay (Bowyer–Watson, O(n²)) → Voronoi → slití buněk do nepravidelně
   velkých regionů → doladění,
-  dokud nemá **každý region 3 až 5 sousedů** (`minNeighbours`/`maxNeighbours`).
+  dokud nemá **každý region 3 až 7 sousedů** (`minNeighbours`/`maxNeighbours`).
   Semínko musí přijít zvenčí, engine sám na `Date.now()` ani `Math.random()`
   nesahá.
 - Doladění má dva nástroje a oba ubírají jeden region, takže smyčka vždy skončí:

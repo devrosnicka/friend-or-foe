@@ -4,8 +4,13 @@ import { STARTER_OPTIONS } from '../src/map/starterMap';
 
 const SEEDS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
 
+/**
+ * Vlastnosti mapy se ověřují na malé mřížce — jsou stejné jako na ostré,
+ * jen se to negeneruje desetinu sekundy. Že sedí i produkční nastavení,
+ * hlídá zvlášť test dole a `starterMap.test.ts`.
+ */
 function withSeed(seed: number): WorldOptions {
-  return { ...STARTER_OPTIONS, seed };
+  return { ...STARTER_OPTIONS, seed, columns: 15, rows: 13, minRegions: 12 };
 }
 
 describe('generateWorld', () => {
@@ -18,10 +23,11 @@ describe('generateWorld', () => {
   });
 
   it.each(SEEDS)('semínko %i dá hratelnou mapu', (seed) => {
-    const world = generateWorld(withSeed(seed));
+    const options = withSeed(seed);
+    const world = generateWorld(options);
     const regions = Object.values(world.regions);
 
-    expect(regions.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minRegions);
+    expect(regions.length).toBeGreaterThanOrEqual(options.minRegions);
     expect(world.turn).toBe(1);
 
     for (const region of regions) {
@@ -90,6 +96,18 @@ describe('generateWorld', () => {
     expect([...edges.values()].every((count) => count <= 2)).toBe(true);
   });
 
+  it('ostré nastavení dá mapu o stovkách regionů', () => {
+    const world = generateWorld(STARTER_OPTIONS);
+    const regions = Object.values(world.regions);
+
+    expect(regions.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minRegions);
+    for (const region of regions) {
+      expect(region.neighbours.length).toBeGreaterThanOrEqual(STARTER_OPTIONS.minNeighbours);
+      expect(region.neighbours.length).toBeLessThanOrEqual(STARTER_OPTIONS.maxNeighbours);
+    }
+    expect(new Set(regions.map((region) => region.name)).size).toBe(regions.length);
+  });
+
   it('dodrží i jinak nastavené okno sousednosti', () => {
     // Podlaha 4 vyjde jen na některých semínkách — mapa se kvůli ní zmenší,
     // protože regiony na pobřeží mají přirozeně tři sousedy a musí pryč.
@@ -100,6 +118,8 @@ describe('generateWorld', () => {
       minRegions: 6,
       attempts: 300,
     });
+
+    expect(Object.keys(world.regions).length).toBeGreaterThan(0);
 
     for (const region of Object.values(world.regions)) {
       expect(region.neighbours.length).toBeGreaterThanOrEqual(4);
