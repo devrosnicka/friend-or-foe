@@ -15,7 +15,7 @@
     "dev:web": "npm run dev --workspace @fof/web"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",
