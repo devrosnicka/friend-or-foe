@@ -1,7 +1,8 @@
 import type { PlayerId, Point, Region, World } from '@fof/engine';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RegionView } from './RegionView';
-import { TERRAIN_FILL, TERRAIN_LABEL } from './terrain';
+import { TERRAIN_LABEL } from './terrain';
+import { TerrainTextures, terrainFill } from './textures';
 
 /**
  * Úrovně přiblížení. Šířka výřezu se počítá jako násobek typického průměru
@@ -15,15 +16,20 @@ interface ZoomLevel {
   readonly labels: 'full' | 'name' | 'none';
   /** Pobřežní lem zdvojuje každý obrys, takže na dálku se vypíná. */
   readonly shore: boolean;
+  /** Na dálku je region jen pár desítek pixelů a z textury by zbyl šum. */
+  readonly texture: boolean;
 }
 
 const ZOOM_LEVELS: readonly ZoomLevel[] = [
-  { label: 'Detail', span: 5, labels: 'full', shore: true },
-  { label: 'Okolí', span: 9, labels: 'name', shore: true },
-  { label: 'Přehled', span: 26, labels: 'none', shore: false },
+  { label: 'Detail', span: 5, labels: 'full', shore: true, texture: true },
+  { label: 'Okolí', span: 9, labels: 'name', shore: true, texture: true },
+  { label: 'Přehled', span: 26, labels: 'none', shore: false, texture: false },
 ];
 
 const DEFAULT_ZOOM = 1;
+
+/** Strana dlaždice textury jako podíl typického průměru regionu. */
+const TILE_SHARE = 0.28;
 
 interface Box {
   readonly minX: number;
@@ -157,6 +163,10 @@ export function RegionMap({
   // to rozdíl mezi několika desítkami tvarů a všemi.
   const visible = regions.filter((region) => overlaps(boxes.get(region.id) as Box, view));
 
+  // Dlaždice je zlomek typického regionu, ne obrazovky — textura pak drží
+  // měřítko světa a při přiblížení se zvětší spolu s ním.
+  const tile = unit * TILE_SHARE;
+
   /** Popisky se nesmějí zmenšovat s výřezem, jinak by na dálku zmizely. */
   const textScale = size.width > 0 ? viewWidth / size.width : 1;
   const adjacent = new Set(focus.neighbours);
@@ -215,6 +225,8 @@ export function RegionMap({
         role="group"
         aria-label={`Mapa regionů, střed ${focus.name}, ${visible.length} z ${regions.length} regionů v záběru`}
       >
+        {level.texture && <TerrainTextures tile={tile} />}
+
         {/* Pobřežní lem: tytéž obrysy silnou linkou pod pevninou. */}
         {level.shore && (
           <g className="shoreline">
@@ -233,6 +245,7 @@ export function RegionMap({
             selected={region.id === selectedRegionId}
             adjacent={adjacent.has(region.id)}
             labels={level.labels}
+            textured={level.texture}
             textScale={textScale}
             widthPixels={roomAround(region, boxes.get(region.id) as Box) / textScale}
             onSelect={onSelect}
@@ -271,6 +284,7 @@ interface RegionShapeProps {
   readonly selected: boolean;
   readonly adjacent: boolean;
   readonly labels: ZoomLevel['labels'];
+  readonly textured: boolean;
   readonly textScale: number;
   /** Kolik pixelů je region na obrazovce široký — do toho se musí vejít popisek. */
   readonly widthPixels: number;
@@ -284,6 +298,7 @@ function RegionShape({
   selected,
   adjacent,
   labels,
+  textured,
   textScale,
   widthPixels,
   onSelect,
@@ -308,7 +323,7 @@ function RegionShape({
         }
       }}
     >
-      <polygon points={points} fill={TERRAIN_FILL[region.terrain]} />
+      <polygon points={points} fill={terrainFill(region.terrain, textured)} />
       {/* Neutrální region žádnou barvu vlastníka nepotřebuje, a je jich většina. */}
       {region.owner !== null && <polygon className="owner-overlay" points={points} />}
       <polygon className="outline" points={points} vectorEffect="non-scaling-stroke" />

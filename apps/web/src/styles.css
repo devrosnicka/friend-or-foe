@@ -168,14 +168,16 @@ button.secondary {
   fill: transparent;
 }
 
+/* Barva vlastníka leží na textuře, tak musí zůstat průsvitná; kdo komu patří,
+   dopoví obrys. */
 .region.mine .owner-overlay {
   fill: var(--mine);
-  opacity: 0.55;
+  opacity: 0.38;
 }
 
 .region.foreign .owner-overlay {
   fill: var(--foreign);
-  opacity: 0.55;
+  opacity: 0.38;
 }
 
 .region .outline {

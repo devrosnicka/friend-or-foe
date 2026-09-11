@@ -1,6 +1,6 @@
 import { RESOURCE_IMPROVEMENT, type BuildSlot, type Point, type Region, type World } from '@fof/engine';
 import { useMemo } from 'react';
-import { TERRAIN_FILL } from './terrain';
+import { TerrainTextures, terrainFill } from './textures';
 
 /** Kolik místa kolem regionu zbude na náznak sousedů. */
 const SURROUNDS = 0.14;
@@ -10,6 +10,8 @@ const NAME_OFFSET = 0.07;
 const SLOT_RADIUS = 0.13;
 /** Jak hustě se plocha regionu proseje při hledání míst. */
 const SAMPLE_STEPS = 26;
+/** Strana dlaždice textury jako podíl kratší strany regionu. */
+const TILE_SHARE = 0.22;
 
 interface Box {
   readonly minX: number;
@@ -172,6 +174,7 @@ export function RegionView({
   const width = box.maxX - box.minX;
   const height = box.maxY - box.minY;
   const slotRadius = Math.min(width, height) * SLOT_RADIUS;
+  const tile = Math.min(width, height) * TILE_SHARE;
   const positions = useMemo(() => slotPositions(region, slotRadius), [region, slotRadius]);
 
   const margin = Math.max(width, height) * SURROUNDS;
@@ -196,13 +199,15 @@ export function RegionView({
         role="group"
         aria-label={`Region ${region.name}, ${region.slots.length} stavebních míst`}
       >
+        <TerrainTextures tile={tile} />
+
         {/* Sousedé jen jako slabý náznak — kam sahá moře, nekreslí se nic. */}
         <g className="surrounds">
           {neighbours.map((neighbour) => (
             <polygon
               key={neighbour.id}
               points={pointsOf(neighbour.shape.outline)}
-              fill={TERRAIN_FILL[neighbour.terrain]}
+              fill={terrainFill(neighbour.terrain, true)}
             />
           ))}
         </g>
@@ -226,7 +231,7 @@ export function RegionView({
         <polygon
           className="focus"
           points={pointsOf(region.shape.outline)}
-          fill={TERRAIN_FILL[region.terrain]}
+          fill={terrainFill(region.terrain, true)}
         />
 
         {region.slots.map((slot, index) => (
