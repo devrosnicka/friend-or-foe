@@ -92,19 +92,19 @@ describe('buildLayout', () => {
   });
 
   it('nezaplaví region, kterým mapa drží pohromadě', () => {
-    // Semínko 197 na mřížce 13×11 vede na šíji: zaplavení jednoho regionu by
+    // Semínko 93 na mřížce 12×10 vede na šíji: zaplavení jednoho regionu by
     // pevninu rozdělilo, takže generátor musí sáhnout po jiném.
-    const narrow = layoutFor(13, 11, 197);
+    const narrow = layoutFor(12, 10, 93);
 
     expect(isWhole(narrow)).toBe(true);
     expect(narrow.length).toBeGreaterThanOrEqual(OPTIONS.minRegions);
   });
 
   it('nesloučí regiony, které by kolem někoho uzavřely kruh', () => {
-    // Semínko 10 na mřížce 9×8: osamělý region má souseda, se kterým by
+    // Semínko 57 na mřížce 9×8: osamělý region má souseda, se kterým by
     // dohromady obklíčily třetí region. Takové sloučení se musí zahodit,
     // jinak by vznikl obrys s dírou uprostřed.
-    const ringed = layoutFor(9, 8, 10, { ...OPTIONS, maxNeighbours: 4 });
+    const ringed = layoutFor(9, 8, 57, { ...OPTIONS, maxNeighbours: 4 });
     expect(ringed.length).toBeGreaterThanOrEqual(OPTIONS.minRegions);
 
     for (const region of ringed) {

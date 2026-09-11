@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { generateWorld, type WorldOptions } from '../src/map/generateWorld';
 import { STARTER_OPTIONS } from '../src/map/starterMap';
+import { polygonArea } from '../src/map/geometry';
+import type { Point } from '../src/types';
 
 const SEEDS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
 
@@ -11,6 +13,31 @@ const SEEDS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
  */
 function withSeed(seed: number): WorldOptions {
   return { ...STARTER_OPTIONS, seed, columns: 15, rows: 13, minRegions: 12 };
+}
+
+/**
+ * Jak daleko má obrys nejblíž k tomu, aby se sevřel sám na sebe — jako podíl
+ * velikosti regionu. Sevření je dvojice vrcholů, které v obrysu neleží u sebe,
+ * ale v rovině ano; region pak vypadá jako dva kusy spojené rohem. Krátká
+ * zajížďka po obvodu se nepočítá, tam jde jen o vlnku na hranici.
+ */
+function pinch(outline: readonly Point[]): number {
+  const gap = (a: Point, b: Point): number => Math.hypot(a.x - b.x, a.y - b.y);
+  const steps = outline.map((point, i) => gap(point, outline[(i + 1) % outline.length] as Point));
+  const perimeter = steps.reduce((total, step) => total + step, 0);
+  const reach = Math.sqrt(polygonArea(outline));
+
+  let closest = Infinity;
+  for (let i = 0; i < outline.length; i += 1) {
+    let arc = 0;
+    for (let j = i + 1; j < outline.length; j += 1) {
+      arc += steps[j - 1] as number;
+      if (Math.min(arc, perimeter - arc) >= reach) {
+        closest = Math.min(closest, gap(outline[i] as Point, outline[j] as Point) / reach);
+      }
+    }
+  }
+  return closest;
 }
 
 describe('generateWorld', () => {
@@ -41,6 +68,15 @@ describe('generateWorld', () => {
       for (const neighbour of region.neighbours) {
         expect(world.regions[neighbour]?.neighbours).toContain(region.id);
       }
+    }
+  });
+
+  it.each(SEEDS)('semínko %i nedá region sevřený do dvou kusů', (seed) => {
+    // Bez zahazování třískových sousedství klesalo sevření až na 0,001 —
+    // region se obrysem vracel do téhož bodu a vypadal jako dva regiony
+    // spojené rohem.
+    for (const region of Object.values(generateWorld(withSeed(seed)).regions)) {
+      expect(pinch(region.shape.outline)).toBeGreaterThan(0.02);
     }
   });
 

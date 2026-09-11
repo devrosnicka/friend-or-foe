@@ -6,8 +6,8 @@ Pokyny pro Claude Code při práci v tomto repozitáři.
 
 Běží první prototyp: generovaná mapa nepravidelných regionů v prohlížeči,
 zabírání regionů, stavba budov, plochá ekonomika a ukládání stavu. Výchozí
-svět má zhruba 660 regionů (mřížka 44×40, okno 3–7, ~23 % vody) a vzniká
-za dvě desetiny sekundy. Bot, boj, diplomacie ani multiplayer zatím
+svět má zhruba 670 regionů (mřížka 44×40, okno 3–7, ~17 % vody) a vzniká
+za desetinu sekundy. Bot, boj, diplomacie ani multiplayer zatím
 neexistují — viz „Scope prvního prototypu".
 
 Dokumentace i UI jsou česky, doménové názvy (region, production, plains, iron, …)
@@ -115,6 +115,13 @@ i backendu bez přepisování herních pravidel.
   ukusovala dovnitř, dokud by z mapy nezbylo nic.
 - Podlaha 6 a výš je **nemožná z principu**: mapa je rovinný graf, kde
   `2E ≤ 6n − 12`, takže aspoň jeden region má vždy nejvýš pět sousedů.
+- **Sousedství přes roh se neuznává.** Čtyři body kolem oka mřížky leží skoro
+  na kružnici, takže úhlopříčná Voronoi hrana vyjde jako tříska o délce setin
+  jednotky — a kterou z obou úhlopříček Delaunay zvolí, rozhodne zaokrouhlení.
+  Buňky se společnou hranicí kratší než `MIN_BORDER_SHARE` vzdálenosti svých
+  bodů proto sousedy nejsou. Bez toho se takové dvě buňky slily do jednoho
+  regionu a jeho obrys se v tom bodě sevřel: region vypadal jako dva kusy
+  spojené rohem.
 - Triangulace staví v normalizovaném rámci: pomocný trojúhelník musí obsáhnout
   kružnice opsané všech trojúhelníků, a ty u skoro kolineárních trojic na okraji
   mají poloměr stonásobky velikosti mapy. V původních souřadnicích by tak daleké

@@ -1,5 +1,12 @@
 import { triangulate } from './delaunay';
+import { distanceSquared } from './geometry';
 import type { Point } from '../types';
+
+/**
+ * Nejkratší společná hranice, kterou ještě bereme jako sousedství — jako
+ * podíl vzdálenosti obou bodů, takže na měřítku mapy nezáleží.
+ */
+const MIN_BORDER_SHARE = 0.05;
 
 export interface VoronoiCell {
   readonly site: Point;
@@ -19,6 +26,33 @@ export interface VoronoiDiagram {
 
 function edgeKey(from: number, to: number): string {
   return from < to ? `${from},${to}` : `${to},${from}`;
+}
+
+/**
+ * Dotýkají se dvě buňky jen třískou místo pořádné hranice?
+ *
+ * Čtyři body kolem jednoho oka mřížky leží skoro na kružnici, takže oba
+ * trojúhelníky, které to oko dělí, mají skoro stejný střed kružnice opsané.
+ * Voronoi hrana duální k úhlopříčce pak vyjde jako tříska o délce setin
+ * jednotky, zatímco typická hrana měří skoro celou rozteč. Takové dvě buňky
+ * se prakticky dotýkají jediným bodem, a Delaunay si mezi oběma úhlopříčkami
+ * vybírá podle zaokrouhlení — sousedství je tu artefakt triangulace, ne tvar
+ * mapy. Kdyby takové buňky spadly do jednoho regionu, jeho obrys by se v tom
+ * bodě sevřel a region by vypadal jako dva kusy spojené rohem.
+ */
+function touchesOnlyInPoint(
+  vertices: readonly Point[],
+  site: Point,
+  other: Point,
+  fan: readonly number[],
+  otherFan: readonly number[],
+): boolean {
+  // Uzavřená buňka sdílí s každým sousedem právě dva trojúhelníky — jinak by
+  // ji `closed` níž zahodilo — a jejich středy jsou konce společné hranice.
+  const [from, to] = fan.filter((vertex) => otherFan.includes(vertex)) as [number, number];
+  const border = distanceSquared(vertices[from] as Point, vertices[to] as Point);
+
+  return border < MIN_BORDER_SHARE * MIN_BORDER_SHARE * distanceSquared(site, other);
 }
 
 /**
@@ -77,7 +111,22 @@ export function buildVoronoi(sites: readonly Point[]): VoronoiDiagram {
       return Math.atan2(a.y - site.y, a.x - site.x) - Math.atan2(b.y - site.y, b.x - site.x);
     });
 
-    return { site, ring, neighbours: [...neighbours].sort((a, b) => a - b) };
+    return {
+      site,
+      ring,
+      neighbours: [...neighbours]
+        .sort((a, b) => a - b)
+        .filter(
+          (other) =>
+            !touchesOnlyInPoint(
+              vertices,
+              site,
+              sites[other] as Point,
+              fan,
+              incident[other] as number[],
+            ),
+        ),
+    };
   });
 
   return { sites, vertices, cells };

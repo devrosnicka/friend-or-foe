@@ -87,7 +87,8 @@ function growGroups(
 
       // Sousední buňka sdílí se skupinou celou hranu, takže jejich sjednocení
       // je vždycky jeden prostý obrys — u nejvýš tří buněk nemá kde vzniknout
-      // ani díra, ani dotyk v jediném bodě.
+      // ani díra, ani dotyk v jediném bodě. Že je ta hrana pořádná a ne tříska,
+      // hlídá `buildVoronoi`, když sousedství přes roh vůbec nevydá.
       const merged = unionRings([
         group.ring,
         (diagram.cells[candidate] as VoronoiCell).ring,

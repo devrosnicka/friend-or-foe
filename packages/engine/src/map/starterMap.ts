@@ -7,13 +7,14 @@ export const STARTER_PLAYER_ID = 'p1';
 export const STARTER_SEED = 20260909;
 
 /**
- * Mřížka určuje velikost světa; 44×40 vychází na zhruba 660 regionů. Poměr
+ * Mřížka určuje velikost světa; 44×40 vychází na zhruba 670 regionů. Poměr
  * stran je libovolný — na výsledek má vliv jen počet bodů, protože mapa se
  * stejně prohlíží výřezem.
  *
- * Strop 7 sousedů drží podíl vody kolem 23 %: zátoky a jezera zůstanou jako
+ * Strop 7 sousedů drží podíl vody kolem 17 %: zátoky a jezera zůstanou jako
  * přirozené hranice, ale pevnina se nerozpadne na souostroví, jak se to dělo
- * při stropu 5.
+ * při stropu 5. Vody ubylo, když se přestala uznávat sousedství přes roh —
+ * regionů je míň přelidněných, takže se jich tolik nemusí zaplavit.
  */
 export const STARTER_OPTIONS: WorldOptions = {
   seed: STARTER_SEED,
