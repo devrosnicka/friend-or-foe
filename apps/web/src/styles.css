@@ -375,3 +375,41 @@ button.secondary {
   padding: 40px;
   color: var(--muted);
 }
+
+/* --- ladicí stránka textur (/textures.html) --- */
+.textures-preview h1 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.textures-preview header label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+}
+
+.swatch {
+  margin: 0;
+}
+
+.swatch svg {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.swatch figcaption {
+  padding: 6px 2px;
+}
+
+.swatch .muted {
+  color: var(--muted);
+}

@@ -24,6 +24,11 @@ npm run dev:api      # API na http://localhost:3000
 npm run dev:web      # UI na http://localhost:5173 (proxuje /api na 3000)
 ```
 
+Na `http://localhost:5173/textures.html` je ladicí stránka textur terénu:
+každý terén na velké ploše, ve třech měřítcích a s volitelnou mřížkou dlaždic,
+na které je vidět případný šev. Na mapě se opakování vzoru pozná špatně, protože
+regiony jsou malé. Stránka žije jen ve vývoji, `vite build` staví `index.html`.
+
 Pro hraní je potřeba mít puštěné oba servery. Stav světa leží v
 `apps/api/data/world.json` (gitignorováno); smazání souboru nebo `POST /api/reset`
 založí novou hru.
